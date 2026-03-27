@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState } from 'react';
+import type { ReactNode } from 'react';
 
 // Estructura de usuario exportada
 export interface User {
@@ -18,27 +19,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
 
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-
-  useEffect(() => {
-  
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+  const [user, setUser] = useState<User | null>(() => {
     
-    if (storedToken && storedUser) {
-    
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-      
-    } else {
-    
-      // Usuario visitante
-      setUser({ id: 0, email: 'guest@coloral.local', role: 'GUEST' });
-      
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) return JSON.parse(storedUser);
+      return { id: 0, email: 'guest@coloral.local', role: 'GUEST' };
+    } catch {
+      return { id: 0, email: 'guest@coloral.local', role: 'GUEST' };
     }
     
-  }, []);
+  });
+
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
 
   const login = (userData: User, tokenData: string) => {
   

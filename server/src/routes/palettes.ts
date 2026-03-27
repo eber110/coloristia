@@ -76,4 +76,58 @@ router.get('/', authMiddleware, async (req: any, res: any) => {
   
 });
 
+// Eliminar paleta
+router.delete('/:id', authMiddleware, async (req: any, res: any) => {
+
+  try {
+    const { id } = req.params;
+    const userId = req.user.userId;
+
+    const palette = await prisma.palette.findFirst({
+      where: { id: Number(id), userId }
+    });
+
+    if (!palette) {
+      return res.status(404).json({ error: 'Palette not found or unauthorized' });
+    }
+
+    await prisma.palette.delete({
+      where: { id: Number(id) }
+    });
+
+    res.json({ message: 'Palette deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error deleting palette' });
+  }
+  
+});
+
+// Renombrar paleta
+router.put('/:id', authMiddleware, async (req: any, res: any) => {
+
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    const userId = req.user.userId;
+
+    const palette = await prisma.palette.findFirst({
+      where: { id: Number(id), userId }
+    });
+
+    if (!palette) {
+      return res.status(404).json({ error: 'Palette not found or unauthorized' });
+    }
+
+    const updatedPalette = await prisma.palette.update({
+      where: { id: Number(id) },
+      data: { name }
+    });
+
+    res.json(updatedPalette);
+  } catch (error) {
+    res.status(500).json({ error: 'Error updating palette' });
+  }
+  
+});
+
 export default router;

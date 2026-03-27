@@ -65,6 +65,70 @@ const ColorTextInput = ({ colorHex, format, onChange, formatColorString }: { col
   
 };
 
+// --- Sub-componente: Custom Select ---
+const CustomSelect = ({ value, options, onChange, label }: { value: string, options: { value: string, label: string }[], onChange: (v: string) => void, label: string }) => {
+
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', position: 'relative', width: '250px' }}>
+      <label style={{ fontSize: '0.95rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{label}</label>
+      
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          background: 'rgba(255, 255, 255, 0.05)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          borderRadius: '12px',
+          padding: '0.8rem 1.2rem',
+          color: '#fff',
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontWeight: '600',
+          backdropFilter: 'blur(10px)',
+          transition: 'all 0.3s'
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+        onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+      >
+        <span>{options.find(o => o.value === value)?.label}</span>
+        <span style={{ transition: 'transform 0.3s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0)' }}>▼</span>
+      </div>
+
+      {isOpen && (
+        <>
+          <div onClick={() => setIsOpen(false)} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 900 }} />
+          <div style={{
+            position: 'absolute', top: '100%', left: 0, width: '100%', marginTop: '8px',
+            background: 'rgba(20, 25, 30, 0.95)', border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '12px', overflow: 'hidden', zIndex: 901, backdropFilter: 'blur(20px)',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.5)', animation: 'slideInY 0.2s ease-out'
+          }}>
+            {options.map(o => (
+              <div 
+                key={o.value}
+                onClick={() => { onChange(o.value); setIsOpen(false); }}
+                style={{
+                  padding: '0.8rem 1.2rem', color: value === o.value ? '#fff' : 'rgba(255,255,255,0.7)',
+                  background: value === o.value ? 'rgba(167, 119, 227, 0.4)' : 'transparent',
+                  cursor: 'pointer', transition: 'all 0.2s', fontWeight: value === o.value ? 'bold' : 'normal'
+                }}
+                onMouseEnter={(e) => { if (value !== o.value) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                onMouseLeave={(e) => { if (value !== o.value) e.currentTarget.style.background = 'transparent'; }}
+              >
+                {o.label}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+  
+};
+
 // --- Sub-componente: Sección de Paleta ---
 const PaletteSection = ({ 
   baseHex, 
@@ -203,6 +267,11 @@ export default function Home() {
   });
   const [colorFormat, setColorFormat] = useState<string>('hex');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Estados para gestión dentro del modal
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [editingPaletteId, setEditingPaletteId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState<string>('');
 
   interface Palette {
     id: number;
@@ -239,7 +308,7 @@ export default function Home() {
   // Limites por rol
   const maxInputs = user?.role === 'PREMIUM' ? 10 : user?.role === 'REGISTERED' ? 3 : 1;
   const maxVariations = user?.role === 'PREMIUM' ? 15 : user?.role === 'REGISTERED' ? 10 : 4;
-  const minVariations = user?.role === 'GUEST' ? 4 : 2;
+  const minVariations = 4;
 
   // Actualizar limites solo cuando cambie el rol de forma reactiva, evitando setState innecesarios
   useEffect(() => {
@@ -307,6 +376,39 @@ export default function Home() {
       console.error(e);
       showToast('Error obteniendo paletas.', 'error');
       
+    }
+    
+  };
+
+  const handleDeletePalette = async (id: number) => {
+
+    try {
+      await axios.delete(`http://localhost:5000/api/palettes/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSavedPalettes(prev => prev.filter(p => p.id !== id));
+      showToast('Paleta eliminada correctamente.', 'success');
+      setConfirmDeleteId(null);
+    } catch (e) {
+      console.error(e);
+      showToast('Error al eliminar la paleta.', 'error');
+    }
+    
+  };
+
+  const handleRenamePalette = async (id: number) => {
+
+    if (!editingName.trim()) return;
+    try {
+      await axios.put(`http://localhost:5000/api/palettes/${id}`, { name: editingName }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSavedPalettes(prev => prev.map(p => p.id === id ? { ...p, name: editingName } : p));
+      showToast('Paleta renombrada correctamente.', 'success');
+      setEditingPaletteId(null);
+    } catch (e) {
+      console.error(e);
+      showToast('Error al renombrar la paleta.', 'error');
     }
     
   };
@@ -454,6 +556,19 @@ export default function Home() {
           .toast-item {
             animation: slideIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
           }
+          @keyframes slideInY {
+            from { transform: translateY(-10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+          }
+          /* Ocultar flechas nativas de input number */
+          input::-webkit-outer-spin-button,
+          input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+          }
+          input[type=number] {
+            -moz-appearance: textfield;
+          }
         `}
       </style>
 
@@ -493,29 +608,145 @@ export default function Home() {
           )}
         </div>
         
-        <div style={{ display: 'flex', gap: '2rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-            <label style={{ fontSize: '0.95rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>Sistema de color:</label>
-            <div style={{ position: 'relative' }}>
-              <select className="input-glass" style={{ width: '250px', appearance: 'none', padding: '0.8rem 1.2rem', cursor: 'pointer', fontWeight: '600' }} value={colorFormat} onChange={(e) => setColorFormat(e.target.value)}>
-                <option value="hex">HEX</option>
-                <option value="rgb">RGB</option>
-                <option value="hsl">HSL</option>
-              </select>
-              <div style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--text-secondary)' }}>▼</div>
-            </div>
-          </div>
+        <div style={{ display: 'flex', gap: '2.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
           
+          <CustomSelect 
+            label="Sistema de color:"
+            value={colorFormat}
+            onChange={setColorFormat}
+            options={[
+              { value: 'hex', label: 'HEX' },
+              { value: 'rgb', label: 'RGB' },
+              { value: 'hsl', label: 'HSL' }
+            ]}
+          />
+          
+          {user?.role !== 'GUEST' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+              <label style={{ fontSize: '0.95rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>Variaciones ({minVariations}-{maxVariations}):</label>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                background: 'rgba(255, 255, 255, 0.05)', 
+                borderRadius: '12px', 
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                padding: '2px',
+                width: 'fit-content'
+              }}>
+                <button 
+                  onClick={() => setVariationsCount(prev => Math.max(minVariations, prev - 1))}
+                  disabled={variationsCount <= minVariations}
+                  style={{
+                    width: '36px', height: '36px', borderRadius: '10px', border: 'none',
+                    background: 'transparent', color: '#fff', fontSize: '1.2rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
+                    opacity: (variationsCount <= minVariations) ? 0.3 : 1
+                  }}
+                  onMouseEnter={(e) => { if (e.currentTarget.style.opacity !== '0.3') e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >-</button>
+                
+                <input 
+                  type="number" 
+                  style={{ 
+                    width: '50px', 
+                    textAlign: 'center',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    outline: 'none',
+                    fontSize: '1rem'
+                  }} 
+                  min={minVariations} max={maxVariations} value={variationsCount}
+                  onChange={(e) => { const val = parseInt(e.target.value); setVariationsCount(isNaN(val) ? minVariations : val); }}
+                  onBlur={() => {
+                    if (variationsCount > maxVariations) setVariationsCount(maxVariations);
+                    if (variationsCount < minVariations) setVariationsCount(minVariations);
+                  }}
+                />
+
+                <button 
+                  onClick={() => setVariationsCount(prev => Math.min(maxVariations, prev + 1))}
+                  disabled={variationsCount >= maxVariations}
+                  style={{
+                    width: '36px', height: '36px', borderRadius: '10px', border: 'none',
+                    background: 'transparent', color: '#fff', fontSize: '1.2rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
+                    opacity: (variationsCount >= maxVariations) ? 0.3 : 1
+                  }}
+                  onMouseEnter={(e) => { if (e.currentTarget.style.opacity !== '0.3') e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >+</button>
+              </div>
+            </div>
+          )}
+
+          {/* Botón Agregar Color en la Barra de Herramientas */}
+          {colors.length < maxInputs && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+              <label style={{ fontSize: '0.95rem', fontWeight: 'bold', color: 'transparent' }}>.</label>
+              <button 
+                className="button-primary" 
+                onClick={addColor} 
+                title="Agregar Color"
+                style={{ 
+                  height: '42px', width: '42px', borderRadius: '12px', 
+                  display: 'flex', justifyContent: 'center', alignItems: 'center', 
+                  fontSize: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                  background: 'linear-gradient(135deg, #a777e3 0%, #6e8efb 100%)',
+                  border: 'none', color: '#fff', cursor: 'pointer', transition: 'transform 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >+</button>
+            </div>
+          )}
+
+          {/* Botón Color Azar / Recargar */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-            <label style={{ fontSize: '0.95rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>Variaciones ({minVariations}-{maxVariations}):</label>
-            <input type="number" className="input-glass" style={{ width: '120px' }} min={minVariations} max={maxVariations} value={variationsCount}
-              onChange={(e) => { const val = parseInt(e.target.value); setVariationsCount(isNaN(val) ? minVariations : val); }}
-              onBlur={() => {
-                if (variationsCount > maxVariations) setVariationsCount(maxVariations);
-                if (variationsCount < minVariations) setVariationsCount(minVariations);
+            <label style={{ fontSize: '0.95rem', fontWeight: 'bold', color: 'transparent' }}>.</label>
+            <button 
+              onClick={() => {
+                const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0').toUpperCase();
+                setColors([randomColor]);
+                showToast(`Nueva paleta aleatoria: ${randomColor}`, 'info');
+              }} 
+              title="Color Aleatorio"
+              style={{ 
+                height: '42px', width: '42px', borderRadius: '12px', 
+                display: 'flex', justifyContent: 'center', alignItems: 'center', 
+                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                cursor: 'pointer', transition: 'all 0.2s',
+                outline: 'none',
+                padding: 0
               }}
-              disabled={user?.role === 'GUEST'}
-            />
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.1)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+              }}
+            >
+              <svg 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="#ffffff" 
+                strokeWidth="2.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                style={{ width: '20px', height: '20px', display: 'block' }}
+              >
+                <path d="M21 2v6h-6"></path>
+                <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+                <path d="M3 22v-6h6"></path>
+                <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -624,9 +855,6 @@ export default function Home() {
               <ColorTextInput colorHex={c} format={colorFormat} onChange={(newHex) => updateColor(i, newHex)} formatColorString={formatColorString} />
             </div>
           ))}
-          {colors.length < maxInputs && (
-            <button className="button-primary" onClick={addColor} style={{ height: '90px', width: '90px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '2.5rem', boxShadow: '0 8px 16px rgba(0,0,0,0.2)' }}>+</button>
-          )}
         </div>
       </div>
 
@@ -656,17 +884,77 @@ export default function Home() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {savedPalettes.map(p => (
-                   <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.2rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px' }}>
-                     <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
-                       <div style={{ width: '55px', height: '55px', borderRadius: '12px', background: p.colors?.base || '#fff', border: '2px solid rgba(255,255,255,0.1)' }}></div>
-                       <div>
-                         <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#fff' }}>{p.name}</div>
-                         <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', marginTop: '4px' }}>{new Date(p.createdAt).toLocaleDateString()}</div>
+                   <div key={p.id} style={{ display: 'flex', flexDirection: 'column', padding: '1.2rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', gap: '1rem', transition: 'all 0.3s' }}>
+                     
+                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                         <div style={{ width: '55px', height: '55px', borderRadius: '12px', background: p.colors?.base || '#fff', border: '2px solid rgba(255,255,255,0.1)' }}></div>
+                         <div>
+                           {editingPaletteId === p.id ? (
+                             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                               <input 
+                                 className="input-glass" 
+                                 style={{ fontSize: '1rem', width: '180px', padding: '0.4rem 0.8rem' }}
+                                 value={editingName}
+                                 onChange={(e) => setEditingName(e.target.value)}
+                                 autoFocus
+                               />
+                               <button onClick={() => handleRenamePalette(p.id)} style={{ color: '#6e8efb', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}>✔</button>
+                               <button onClick={() => setEditingPaletteId(null)} style={{ color: '#ff3c3c', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
+                             </div>
+                           ) : (
+                             <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                               {p.name}
+                               <span 
+                                 onClick={() => { setEditingPaletteId(p.id); setEditingName(p.name); }} 
+                                 style={{ cursor: 'pointer', opacity: 0.4, fontSize: '0.85rem' }}
+                               >✏️</span>
+                             </div>
+                           )}
+                           <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', marginTop: '4px' }}>{new Date(p.createdAt).toLocaleDateString()}</div>
+                         </div>
+                       </div>
+
+                       <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+                          <button 
+                            className="button-primary" 
+                            style={{ padding: '0.64rem 1.2rem', borderRadius: '8px', fontSize: '0.85rem' }} 
+                            onClick={() => loadPaletteAsColors(p.colors?.base)}
+                          >
+                            Cargar
+                          </button>
+                          
+                          <button 
+                            onClick={() => setConfirmDeleteId(p.id)}
+                            style={{ 
+                              background: 'rgba(255, 60, 60, 0.1)', border: '1px solid rgba(255, 60, 60, 0.2)', 
+                              color: '#ff3c3c', width: '40px', height: '40px', borderRadius: '8px',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 60, 60, 0.2)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 60, 60, 0.1)'}
+                            title="Eliminar Paleta"
+                          >
+                            🗑️
+                          </button>
                        </div>
                      </div>
-                     <button className="button-primary" style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', fontSize: '0.85rem' }} onClick={() => loadPaletteAsColors(p.colors?.base)}>
-                       Cargar
-                     </button>
+
+                     {confirmDeleteId === p.id && (
+                       <div style={{ 
+                         background: 'rgba(255, 60, 60, 0.15)', border: '1px solid rgba(255, 60, 60, 0.3)', 
+                         borderRadius: '12px', padding: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                         animation: 'slideIn 0.3s ease-out'
+                       }}>
+                         <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 'bold' }}>¿Confirmar para eliminar?</span>
+                         <div style={{ display: 'flex', gap: '1rem' }}>
+                           <button onClick={() => handleDeletePalette(p.id)} style={{ color: '#ff3c3c', background: 'transparent', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem' }}>SÍ, ELIMINAR</button>
+                           <button onClick={() => setConfirmDeleteId(null)} style={{ color: '#fff', background: 'transparent', border: 'none', fontWeight: '300', cursor: 'pointer', fontSize: '0.9rem' }}>CANCELAR</button>
+                         </div>
+                       </div>
+                     )}
+
                    </div>
                 ))}
               </div>
