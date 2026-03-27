@@ -61,6 +61,27 @@ export function hslToRgb(h: number, s: number, l: number): [number, number, numb
   
 }
 
+// Convierte HEX a RGB
+export function hexToRgb(hex: string): [number, number, number] {
+
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+  
+    r = parseInt("0x" + hex[1] + hex[1]);
+    g = parseInt("0x" + hex[2] + hex[2]);
+    b = parseInt("0x" + hex[3] + hex[3]);
+    
+  } else if (hex.length === 7) {
+  
+    r = parseInt("0x" + hex[1] + hex[2]);
+    g = parseInt("0x" + hex[3] + hex[4]);
+    b = parseInt("0x" + hex[5] + hex[6]);
+    
+  }
+  return [r, g, b];
+  
+}
+
 // Convierte RGB a HEX
 export function rgbToHex(r: number, g: number, b: number): string {
 
@@ -163,5 +184,43 @@ export function getSplitComplementaryVariations(h: number, s: number, l: number,
   const familySplit2 = generateHueFamily((h + 210) % 360, s, perFamily);
   
   return [...familyBase, ...familySplit1, ...familySplit2];
+  
+}
+
+// Analiza cualquier string de color (HEX, RGB, HSL) y devuelve HEX
+export function parseAnyColorToHex(colorStr: string): string | null {
+
+  const normalized = colorStr.trim().toLowerCase();
+  
+  if (normalized.startsWith('#')) {
+  
+    const hex = normalized.slice(1);
+    if (hex.length === 3 || hex.length === 6) {
+    
+      let fullHex = hex;
+      if (hex.length === 3) fullHex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+      return '#' + fullHex;
+      
+    }
+    
+  }
+  
+  const rgbMatch = normalized.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+  if (rgbMatch) return rgbToHex(parseInt(rgbMatch[1]), parseInt(rgbMatch[2]), parseInt(rgbMatch[3]));
+  
+  const hslMatch = normalized.match(/^hsl\((\d+),\s*(\d+)%?,\s*(\d+)%?\)$/);
+  if (hslMatch) return hslToHex(parseInt(hslMatch[1]), parseInt(hslMatch[2]), parseInt(hslMatch[3]));
+  
+  const noHashHexMatch = normalized.match(/^([0-9a-f]{3}|[0-9a-f]{6})$/);
+  if (noHashHexMatch) {
+  
+    const hex = noHashHexMatch[1];
+    let fullHex = hex;
+    if (hex.length === 3) fullHex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    return '#' + fullHex;
+    
+  }
+  
+  return null;
   
 }
