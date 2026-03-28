@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { HexColorPicker } from 'react-colorful';
 import axios from 'axios';
 import { hexToHsl, hslToHex, getMonochromaticVariations, getAnalogousVariations, getComplementaryVariations, getTriadicVariations, getSplitComplementaryVariations, hslToRgb, parseAnyColorToHex } from '../utils/colorUtils';
 
@@ -258,11 +259,36 @@ export default function Home() {
 
   const { user, token } = useAuth();
   
-  const [colors, setColors] = useState<string[]>(() => [getRandomHex()]);
+  const [colors, setColors] = useState<string[]>(() => {
+    
+    try {
+      const saved = localStorage.getItem('colors');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length >= 2) return parsed;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return [getRandomHex()];
+    
+  });
+
+  // Efecto para la persistencia inteligente
+  useEffect(() => {
+    
+    if (colors.length >= 2) {
+      localStorage.setItem('colors', JSON.stringify(colors));
+    } else {
+      localStorage.removeItem('colors');
+    }
+    
+  }, [colors]);
   const [variationsCount, setVariationsCount] = useState<number>(() => {
   
     const saved = localStorage.getItem('variationsCount');
-    return saved ? parseInt(saved, 10) : 4;
+    const val = saved ? parseInt(saved, 10) : 6;
+    return val < 6 ? 6 : val;
     
   });
   const [colorFormat, setColorFormat] = useState<string>('hex');
@@ -288,6 +314,27 @@ export default function Home() {
   }
 
   const [savedPalettes, setSavedPalettes] = useState<Palette[]>([]);
+  const [pickerOpenIndex, setPickerOpenIndex] = useState<number | null>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Efecto para cerrar el color picker al hacer clic fuera
+  useEffect(() => {
+    
+    const handleClickOutside = (event: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
+        setPickerOpenIndex(null);
+      }
+    };
+
+    if (pickerOpenIndex !== null) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+    
+  }, [pickerOpenIndex]);
   
   // --- Sistema de Toast ---
   const [toasts, setToasts] = useState<{ id: number, message: string, type: 'success' | 'error' | 'info' }[]>([]);
@@ -307,8 +354,8 @@ export default function Home() {
 
   // Limites por rol
   const maxInputs = user?.role === 'PREMIUM' ? 10 : user?.role === 'REGISTERED' ? 3 : 1;
-  const maxVariations = user?.role === 'PREMIUM' ? 15 : user?.role === 'REGISTERED' ? 10 : 4;
-  const minVariations = 4;
+  const maxVariations = user?.role === 'PREMIUM' ? 15 : user?.role === 'REGISTERED' ? 10 : 6;
+  const minVariations = 6;
 
   // Actualizar limites solo cuando cambie el rol de forma reactiva, evitando setState innecesarios
   useEffect(() => {
@@ -569,6 +616,25 @@ export default function Home() {
           input[type=number] {
             -moz-appearance: textfield;
           }
+          /* Custom overrides for react-colorful */
+          .react-colorful {
+            width: 180px !important;
+            height: 180px !important;
+          }
+          .react-colorful__saturation {
+            border-bottom: none !important;
+            border-radius: 12px 12px 0 0 !important;
+          }
+          .react-colorful__hue {
+            height: 14px !important;
+            border-radius: 0 0 12px 12px !important;
+            margin-top: 8px !important;
+          }
+          .react-colorful__pointer {
+            width: 20px !important;
+            height: 20px !important;
+            border-width: 3px !important;
+          }
         `}
       </style>
 
@@ -600,7 +666,21 @@ export default function Home() {
       
       <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
-          <h2>Creador HSL WOW</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            Coloral 
+            {user?.role === 'PREMIUM' && (
+              <span style={{ 
+                fontSize: '0.6em', 
+                background: 'linear-gradient(135deg, #6e8efb 0%, #a777e3 100%)', 
+                padding: '2px 8px', 
+                borderRadius: '6px', 
+                textTransform: 'lowercase',
+                fontWeight: 'bold',
+                letterSpacing: '1px',
+                boxShadow: '0 2px 8px rgba(110, 142, 251, 0.3)'
+              }}>pro</span>
+            )}
+          </h2>
           {user && user.role !== 'GUEST' && (
             <button className="button-secondary" onClick={handleFetchPalettes} style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', cursor: 'pointer', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.2)', color: 'var(--text-primary)', fontWeight: 'bold' }}>
               Mis Paletas
@@ -709,8 +789,18 @@ export default function Home() {
             <button 
               onClick={() => {
                 const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0').toUpperCase();
-                setColors([randomColor]);
-                showToast(`Nueva paleta aleatoria: ${randomColor}`, 'info');
+                
+                if (colors.length > 1) {
+                  // Si hay más de un color, solo cambiamos el ÚLTIMO
+                  const newColors = [...colors];
+                  newColors[newColors.length - 1] = randomColor;
+                  setColors(newColors);
+                  showToast(`Último color cambiado: ${randomColor}`, 'info');
+                } else {
+                  // Si hay un solo color, reemplazamos por completo (comportamiento original)
+                  setColors([randomColor]);
+                  showToast(`Nueva paleta aleatoria: ${randomColor}`, 'info');
+                }
               }} 
               title="Color Aleatorio"
               style={{ 
@@ -761,24 +851,45 @@ export default function Home() {
                 onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.08)'}
                 onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
               >
-                <input 
-                  id={`color-input-${i}`}
-                  type="color" 
-                  style={{ position: 'absolute', top: '-10%', left: '-10%', width: '120%', height: '120%', padding: '0', border: 'none', cursor: 'pointer', background: 'transparent' }}
-                  value={c} onChange={(e) => updateColor(i, e.target.value)} />
-                
-                {colors.length > 1 ? (
-                  <div className="btn-overlay-circle"
-                    style={{
-                      position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.8rem',
-                      opacity: 0, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
-                      backdropFilter: 'blur(8px)',
-                      zIndex: 30, borderRadius: '50%', background: 'rgba(15, 20, 25, 0.4)'
-                    }}
-                  >
-                    {/* Botón Cambiar Color */}
                     <div 
+                      onClick={() => setPickerOpenIndex(i)}
+                      style={{
+                        padding: '0.6rem', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}
+                      title="Cambiar Color"
+                    >
+                      <svg viewBox="0 0 24 24" width="20" height="20" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4L18.5 2.5z"></path></svg>
+                    </div>
+
+                    {/* Popover del Color Picker Estilizado */}
+                    {pickerOpenIndex === i && (
+                      <div 
+                        ref={pickerRef}
+                        style={{
+                          position: 'absolute', top: '110%', left: '50%', transform: 'translateX(-50%)',
+                          zIndex: 100, background: 'rgba(15, 20, 25, 0.95)', 
+                          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                          padding: '1.2rem', borderRadius: '20px', 
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
+                          display: 'flex', flexDirection: 'column', gap: '0.8rem'
+                        }}
+                      >
+                        <HexColorPicker 
+                          color={c} 
+                          onChange={(newColor) => updateColor(i, newColor.toUpperCase())} 
+                        />
+                        <div style={{
+                          fontSize: '0.8rem', color: '#a777e3', fontWeight: 'bold', 
+                          textAlign: 'center', fontFamily: 'monospace'
+                        }}>
+                          {c}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Botón Eliminar Color */}
                       title="Cambiar Color"
                       style={{ 
                         width: '42px', height: '42px', borderRadius: '50%',
