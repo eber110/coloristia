@@ -155,9 +155,10 @@ export function getAnalogousVariations(h: number, s: number, l: number, count: n
 // Genera escalas complementarias (Agrupadas y ordenadas por luminosidad)
 export function getComplementaryVariations(h: number, s: number, l: number, count: number): [number, number, number][] {
 
-  const perFamily = Math.max(2, Math.floor(count / 2));
-  const familyBase = generateHueFamily(h, s, perFamily);
-  const familyComp = generateHueFamily((h + 180) % 360, s, perFamily);
+  const perFamilyBase = Math.ceil(count / 2);
+  const perFamilyComp = Math.floor(count / 2);
+  const familyBase = generateHueFamily(h, s, perFamilyBase);
+  const familyComp = generateHueFamily((h + 180) % 360, s, perFamilyComp);
   
   return [...familyBase, ...familyComp];
   
@@ -166,10 +167,13 @@ export function getComplementaryVariations(h: number, s: number, l: number, coun
 // Genera escalas Triádicas (Agrupadas y ordenadas por luminosidad)
 export function getTriadicVariations(h: number, s: number, l: number, count: number): [number, number, number][] {
 
-  const perFamily = Math.max(2, Math.floor(count / 3));
-  const familyBase = generateHueFamily(h, s, perFamily);
-  const familyTriad1 = generateHueFamily((h + 120) % 360, s, perFamily);
-  const familyTriad2 = generateHueFamily((h + 240) % 360, s, perFamily);
+  const perFamilyBase = Math.floor(count / 3) + (count % 3 > 0 ? 1 : 0);
+  const perFamilyTriad1 = Math.floor(count / 3) + (count % 3 > 1 ? 1 : 0);
+  const perFamilyTriad2 = Math.floor(count / 3);
+  
+  const familyBase = generateHueFamily(h, s, perFamilyBase);
+  const familyTriad1 = generateHueFamily((h + 120) % 360, s, perFamilyTriad1);
+  const familyTriad2 = generateHueFamily((h + 240) % 360, s, perFamilyTriad2);
   
   return [...familyBase, ...familyTriad1, ...familyTriad2];
   
@@ -178,10 +182,13 @@ export function getTriadicVariations(h: number, s: number, l: number, count: num
 // Genera escalas Complementario Dividido (Split-Complementary)
 export function getSplitComplementaryVariations(h: number, s: number, l: number, count: number): [number, number, number][] {
 
-  const perFamily = Math.max(2, Math.floor(count / 3));
-  const familyBase = generateHueFamily(h, s, perFamily);
-  const familySplit1 = generateHueFamily((h + 150) % 360, s, perFamily);
-  const familySplit2 = generateHueFamily((h + 210) % 360, s, perFamily);
+  const perFamilyBase = Math.floor(count / 3) + (count % 3 > 0 ? 1 : 0);
+  const perFamilySplit1 = Math.floor(count / 3) + (count % 3 > 1 ? 1 : 0);
+  const perFamilySplit2 = Math.floor(count / 3);
+  
+  const familyBase = generateHueFamily(h, s, perFamilyBase);
+  const familySplit1 = generateHueFamily((h + 150) % 360, s, perFamilySplit1);
+  const familySplit2 = generateHueFamily((h + 210) % 360, s, perFamilySplit2);
   
   return [...familyBase, ...familySplit1, ...familySplit2];
   
