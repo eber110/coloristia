@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { HexColorPicker } from 'react-colorful';
 import axios from 'axios';
 import { hexToHsl, hslToHex, getMonochromaticVariations, getAnalogousVariations, getComplementaryVariations, getTriadicVariations, getSplitComplementaryVariations, hslToRgb, parseAnyColorToHex } from '../utils/colorUtils';
+import API_BASE_URL from '../config/api';
 
 // --- Sub-componente: Input de texto para colores ---
 const ColorTextInput = ({ colorHex, format, onChange, formatColorString }: { colorHex: string, format: string, onChange: (c: string) => void, formatColorString: (h: number, s: number, l: number, format: string) => string }) => {
@@ -177,7 +178,7 @@ const PaletteSection = ({
         splitComplementary: splitComplementaryColors.map(c => hslToHex(c[0], c[1], c[2]))
       };
 
-      await axios.post('http://localhost:5000/api/palettes', {
+      await axios.post(`${API_BASE_URL}/palettes`, {
         name: paletteName,
         colors: paletteData
       }, {
@@ -454,7 +455,7 @@ export default function Home() {
     if (!user || user.role === 'GUEST') return;
     try {
 
-      const res = await axios.get('http://localhost:5000/api/palettes', {
+      const res = await axios.get(`${API_BASE_URL}/palettes`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSavedPalettes(res.data);
@@ -472,7 +473,7 @@ export default function Home() {
   const handleDeletePalette = async (id: number) => {
 
     try {
-      await axios.delete(`http://localhost:5000/api/palettes/${id}`, {
+      await axios.delete(`${API_BASE_URL}/palettes/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSavedPalettes(prev => prev.filter(p => p.id !== id));
@@ -489,7 +490,7 @@ export default function Home() {
 
     if (!editingName.trim()) return;
     try {
-      await axios.put(`http://localhost:5000/api/palettes/${id}`, { name: editingName }, {
+      await axios.put(`${API_BASE_URL}/palettes/${id}`, { name: editingName }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSavedPalettes(prev => prev.map(p => p.id === id ? { ...p, name: editingName } : p));
