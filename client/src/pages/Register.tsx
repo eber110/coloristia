@@ -7,7 +7,7 @@ export default function Register() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'REGISTERED' | 'PREMIUM'>('REGISTERED');
+  const [role] = useState<'REGISTERED' | 'PREMIUM'>('REGISTERED');
   const [error, setError] = useState('');
   
   const { login } = useAuth();
@@ -66,17 +66,7 @@ export default function Register() {
           />
         </div>
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <label>Membresía (Demo Testing)</label>
-          <select 
-            className="input-glass"
-            value={role}
-            onChange={e => setRole(e.target.value as 'REGISTERED' | 'PREMIUM')}
-          >
-            <option value="REGISTERED">Estándar (Registrado limit. a 3 colores)</option>
-            <option value="PREMIUM">Premium (Ilimitado a 10 colores)</option>
-          </select>
-        </div>
+        {/* Selección de membresía oculta temporalmente */}
         
         <button type="submit" className="button-primary" style={{ marginTop: '1rem' }}>Crear Cuenta</button>
       </form>

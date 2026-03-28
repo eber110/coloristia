@@ -353,8 +353,8 @@ export default function Home() {
   };
 
   // Limites por rol
-  const maxInputs = user?.role === 'PREMIUM' ? 10 : user?.role === 'REGISTERED' ? 3 : 1;
-  const maxVariations = user?.role === 'PREMIUM' ? 15 : user?.role === 'REGISTERED' ? 10 : 6;
+  const maxInputs = user?.role === 'GUEST' ? 1 : 10;
+  const maxVariations = user?.role === 'GUEST' ? 6 : 15;
   const minVariations = 6;
 
   // Actualizar limites solo cuando cambie el rol de forma reactiva, evitando setState innecesarios
