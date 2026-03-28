@@ -808,81 +808,111 @@ export default function Home() {
             </div>
           )}
 
-          {/* Botón Agregar Color en la Barra de Herramientas */}
-          {colors.length < maxInputs && (
+          {/* Grupo de Botones de Acción */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem', height: '100%' }}>
+            {/* Botón Agregar Color */}
+            {colors.length < maxInputs && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <label style={{ fontSize: '0.95rem', fontWeight: 'bold', color: 'transparent' }}>.</label>
+                <button 
+                  className="button-primary" 
+                  onClick={addColor} 
+                  title="Agregar Color"
+                  style={{ 
+                    height: '42px', width: '42px', borderRadius: '12px', 
+                    display: 'flex', justifyContent: 'center', alignItems: 'center', 
+                    fontSize: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                    background: 'linear-gradient(135deg, #a777e3 0%, #6e8efb 100%)',
+                    border: 'none', color: '#fff', cursor: 'pointer', transition: 'transform 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >+</button>
+              </div>
+            )}
+
+            {/* Botón Color Azar / Recargar */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
               <label style={{ fontSize: '0.95rem', fontWeight: 'bold', color: 'transparent' }}>.</label>
               <button 
-                className="button-primary" 
-                onClick={addColor} 
-                title="Agregar Color"
+                onClick={() => {
+                  const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0').toUpperCase();
+                  if (colors.length > 1) {
+                    const newColors = [...colors];
+                    newColors[newColors.length - 1] = randomColor;
+                    setColors(newColors);
+                    showToast(`Último color cambiado: ${randomColor}`, 'info');
+                  } else {
+                    setColors([randomColor]);
+                    showToast(`Nueva paleta aleatoria: ${randomColor}`, 'info');
+                  }
+                }} 
+                title="Color Aleatorio"
                 style={{ 
                   height: '42px', width: '42px', borderRadius: '12px', 
                   display: 'flex', justifyContent: 'center', alignItems: 'center', 
-                  fontSize: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                  background: 'linear-gradient(135deg, #a777e3 0%, #6e8efb 100%)',
-                  border: 'none', color: '#fff', cursor: 'pointer', transition: 'transform 0.2s'
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  cursor: 'pointer', transition: 'all 0.2s',
+                  outline: 'none',
+                  padding: 0
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              >+</button>
-            </div>
-          )}
-
-          {/* Botón Color Azar / Recargar */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-            <label style={{ fontSize: '0.95rem', fontWeight: 'bold', color: 'transparent' }}>.</label>
-            <button 
-              onClick={() => {
-                const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0').toUpperCase();
-                
-                if (colors.length > 1) {
-                  // Si hay más de un color, solo cambiamos el ÚLTIMO
-                  const newColors = [...colors];
-                  newColors[newColors.length - 1] = randomColor;
-                  setColors(newColors);
-                  showToast(`Último color cambiado: ${randomColor}`, 'info');
-                } else {
-                  // Si hay un solo color, reemplazamos por completo (comportamiento original)
-                  setColors([randomColor]);
-                  showToast(`Nueva paleta aleatoria: ${randomColor}`, 'info');
-                }
-              }} 
-              title="Color Aleatorio"
-              style={{ 
-                height: '42px', width: '42px', borderRadius: '12px', 
-                display: 'flex', justifyContent: 'center', alignItems: 'center', 
-                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                cursor: 'pointer', transition: 'all 0.2s',
-                outline: 'none',
-                padding: 0
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.1)';
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-              }}
-            >
-              <svg 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="#ffffff" 
-                strokeWidth="2.5" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                style={{ width: '20px', height: '20px', display: 'block' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                }}
               >
-                <path d="M21 2v6h-6"></path>
-                <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
-                <path d="M3 22v-6h6"></path>
-                <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
-              </svg>
-            </button>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: '20px', height: '20px', display: 'block' }}>
+                  <path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+                  <path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+                </svg>
+              </button>
+            </div>
+
+            {/* Botón Borrar Todo con Etiqueta Unificada */}
+            {colors.length > 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <label style={{ fontSize: '0.95rem', fontWeight: 'bold', color: 'transparent' }}>.</label>
+                <button 
+                  onClick={() => {
+                    setColors([colors[0]]);
+                    showToast('Paleta reseteada al color base', 'info');
+                  }} 
+                  title="Borrar todos los colores"
+                  style={{ 
+                    height: '42px', display: 'flex', alignItems: 'center', gap: '0.8rem', 
+                    background: 'rgba(255, 60, 60, 0.08)', padding: '0 16px 0 6px', 
+                    borderRadius: '14px', border: '1px solid rgba(255, 60, 60, 0.2)',
+                    cursor: 'pointer', transition: 'all 0.2s', outline: 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 60, 60, 0.15)';
+                    e.currentTarget.style.transform = 'scale(1.02)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 60, 60, 0.08)';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  <div style={{ 
+                    height: '32px', width: '32px', borderRadius: '10px', 
+                    display: 'flex', justifyContent: 'center', alignItems: 'center', 
+                    background: 'rgba(255, 60, 60, 0.2)',
+                    border: '1px solid rgba(255, 60, 60, 0.3)' 
+                  }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: '18px', height: '18px' }}>
+                      <path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </div>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#ff6b6b', whiteSpace: 'nowrap' }}>Borrar colores</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -895,21 +925,14 @@ export default function Home() {
                   className="go-to-palette-badge"
                   onClick={() => document.getElementById(`palette-${i}`)?.scrollIntoView({ behavior: 'smooth' })}
                   style={{
-                    position: 'absolute', top: '-1.8rem', left: '50%', transform: 'translateX(-50%)',
-                    whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.1)', 
-                    backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-                    padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem',
+                    position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)',
+                    whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.15)', 
+                    backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                    padding: '6px 14px', borderRadius: '20px', fontSize: '0.85rem',
                     color: '#fff', fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.2)',
-                    cursor: 'pointer', transition: 'all 0.3s', opacity: 0, pointerEvents: 'none',
-                    zIndex: 50, boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
-                    e.currentTarget.style.transform = 'translateX(-50%) scale(1.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                    e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
+                    cursor: 'pointer', transition: 'all 0.3s ease', opacity: 0, pointerEvents: 'none',
+                    zIndex: 50, boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                   }}
                 >
                   Ir a la paleta
