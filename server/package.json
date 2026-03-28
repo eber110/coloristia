@@ -1,7 +1,7 @@
 {
-  "name": "server",
+  "name": "coloristia-server",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend para Coloristia - Generador de Paletas Premium",
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -9,7 +9,7 @@
     "start": "node dist/index.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Eber Sánchez Cornejo <contacto@ebersanchez.cl> (https://www.ebersanchez.cl)",
   "license": "ISC",
   "type": "module",
   "dependencies": {

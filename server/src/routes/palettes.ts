@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 
 const router = Router();
 const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET || 'coloral_secret_key';
+const JWT_SECRET = process.env.JWT_SECRET || 'coloristia_secret_key';
 
 // Middleware simple de auth
 const authMiddleware = (req: any, res: any, next: any) => {

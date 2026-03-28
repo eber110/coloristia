@@ -8,7 +8,7 @@ export default function Navbar() {
   return (
     <nav className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '1rem', padding: '1rem 2rem' }}>
       <Link to="/" style={{ color: 'white', textDecoration: 'none', fontSize: '1.5rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-        Coloral
+        Coloristia
         {user?.role === 'PREMIUM' && (
           <span style={{ 
             fontSize: '0.45em', 

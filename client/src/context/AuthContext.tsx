@@ -24,9 +24,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const storedUser = localStorage.getItem('user');
       if (storedUser) return JSON.parse(storedUser);
-      return { id: 0, email: 'guest@coloral.local', role: 'GUEST' };
+      return { id: 0, email: 'guest@coloristia.local', role: 'GUEST' };
     } catch {
-      return { id: 0, email: 'guest@coloral.local', role: 'GUEST' };
+      return { id: 0, email: 'guest@coloristia.local', role: 'GUEST' };
     }
     
   });
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
   
     setToken(null);
-    setUser({ id: 0, email: 'guest@coloral.local', role: 'GUEST' });
+    setUser({ id: 0, email: 'guest@coloristia.local', role: 'GUEST' });
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     

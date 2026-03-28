@@ -1,7 +1,8 @@
 {
-  "name": "client",
+  "name": "coloristia-client",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "author": "Eber Sánchez Cornejo <contacto@ebersanchez.cl> (https://www.ebersanchez.cl)",
   "type": "module",
   "scripts": {
     "dev": "vite",
