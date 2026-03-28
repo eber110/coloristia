@@ -664,7 +664,10 @@ export default function Home() {
         ))}
       </div>
       
-      <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div className="glass-panel" style={{ 
+        display: 'flex', flexDirection: 'column', gap: '1.5rem',
+        position: 'relative', zIndex: pickerOpenIndex !== null ? 100 : 2
+      }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
           <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
             Coloral 
@@ -843,127 +846,99 @@ export default function Home() {
         <div style={{ display: 'flex', gap: '3rem', alignItems: 'center', marginTop: '2.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
           {colors.map((c, i) => (
             <div key={i} className="color-circle-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center', position: 'relative' }}>
-              <div style={{
-                position: 'relative', width: '130px', height: '130px', borderRadius: '50%', overflow: 'hidden',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.4)', border: '4px solid rgba(255,255,255,0.1)',
-                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'pointer'
-              }}
+              <div 
+                style={{
+                  position: 'relative', width: '130px', height: '130px', borderRadius: '50%',
+                  boxShadow: `0 8px 32px ${c}40`, border: '4px solid rgba(255,255,255,0.1)',
+                  transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'pointer',
+                  backgroundColor: c, overflow: 'visible' // Permitir que el popover sobresalga
+                }}
                 onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.08)'}
                 onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
               >
+                {/* Overlay de botones al hacer Hover */}
+                <div className="btn-overlay-circle"
+                  style={{
+                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.8rem',
+                    opacity: 0, transition: 'all 0.3s ease', 
+                    backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+                    zIndex: 30, borderRadius: '50%', background: 'rgba(0, 0, 0, 0.3)'
+                  }}
+                >
+                  {/* Botón Abrir Selector */}
+                  <div 
+                    onClick={(e) => { e.stopPropagation(); setPickerOpenIndex(i); }}
+                    style={{
+                      width: '40px', height: '40px', borderRadius: '50%',
+                      background: 'rgba(255, 255, 255, 0.2)', 
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#fff', fontSize: '1.1rem', transition: 'all 0.2s',
+                      cursor: 'pointer', border: '1px solid rgba(255,255,255,0.3)'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.4)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+                    title="Cambiar Color"
+                  >
+                    ✎
+                  </div>
+
+                  {/* Botón Eliminar (si hay más de 1) */}
+                  {colors.length > 1 && (
                     <div 
-                      onClick={() => setPickerOpenIndex(i)}
+                      onClick={(e) => { e.stopPropagation(); removeColor(i); }}
                       style={{
-                        padding: '0.6rem', borderRadius: '50%', background: 'rgba(255,255,255,0.1)', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                      }}
-                      title="Cambiar Color"
-                    >
-                      <svg viewBox="0 0 24 24" width="20" height="20" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4L18.5 2.5z"></path></svg>
-                    </div>
-
-                    {/* Popover del Color Picker Estilizado */}
-                    {pickerOpenIndex === i && (
-                      <div 
-                        ref={pickerRef}
-                        style={{
-                          position: 'absolute', top: '110%', left: '50%', transform: 'translateX(-50%)',
-                          zIndex: 100, background: 'rgba(15, 20, 25, 0.95)', 
-                          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                          padding: '1.2rem', borderRadius: '20px', 
-                          border: '1px solid rgba(255,255,255,0.1)',
-                          boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
-                          display: 'flex', flexDirection: 'column', gap: '0.8rem'
-                        }}
-                      >
-                        <HexColorPicker 
-                          color={c} 
-                          onChange={(newColor) => updateColor(i, newColor.toUpperCase())} 
-                        />
-                        <div style={{
-                          fontSize: '0.8rem', color: '#a777e3', fontWeight: 'bold', 
-                          textAlign: 'center', fontFamily: 'monospace'
-                        }}>
-                          {c}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Botón Eliminar Color */}
-                      title="Cambiar Color"
-                      style={{ 
-                        width: '42px', height: '42px', borderRadius: '50%',
-                        background: 'rgba(255, 255, 255, 0.15)', 
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: '#fff', fontSize: '1.2rem', transition: 'all 0.2s',
-                        cursor: 'pointer', border: '1px solid rgba(255,255,255,0.2)',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)';
-                        e.currentTarget.style.transform = 'scale(1.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }}
-                      onClick={() => {
-                        const inputElement = document.getElementById(`color-input-${i}`);
-                        if (inputElement) inputElement.click();
-                      }}
-                    >
-                      ✎
-                    </div>
-
-                    {/* Botón Borrar */}
-                    <div 
-                      title="Borrar Color"
-                      style={{ 
-                        width: '42px', height: '42px', borderRadius: '50%',
+                        width: '40px', height: '40px', borderRadius: '50%',
                         background: 'rgba(255, 60, 60, 0.3)', 
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: '#fff', fontSize: '1.2rem', transition: 'all 0.2s',
-                        cursor: 'pointer', border: '1px solid rgba(255,60,60,0.4)',
-                        boxShadow: '0 4px 12px rgba(255, 60, 60, 0.2)'
+                        color: '#fff', fontSize: '1.1rem', transition: 'all 0.2s',
+                        cursor: 'pointer', border: '1px solid rgba(255,60,60,0.4)'
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 60, 60, 0.5)';
-                        e.currentTarget.style.transform = 'scale(1.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 60, 60, 0.3)';
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }}
-                      onClick={(e) => { e.stopPropagation(); removeColor(i); }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 60, 60, 0.5)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 60, 60, 0.3)'}
+                      title="Borrar Color"
                     >
                       ✕
                     </div>
-                  </div>
-                ) : (
-                  /* Solo Cambiar */
-                  <div className="btn-overlay-circle"
-                    onClick={() => {
-                      const inputElement = document.getElementById(`color-input-${i}`);
-                      if (inputElement) inputElement.click();
-                    }}
+                  )}
+                </div>
+
+                {/* Popover del Color Picker Premium */}
+                {pickerOpenIndex === i && (
+                  <div 
+                    ref={pickerRef}
+                    onClick={(e) => e.stopPropagation()}
                     style={{
-                      position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      opacity: 0, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
-                      backdropFilter: 'blur(8px)',
-                      zIndex: 30, borderRadius: '50%', cursor: 'pointer',
-                      background: 'rgba(15, 20, 25, 0.4)', color: '#fff'
+                      position: 'absolute', top: '110%', left: '50%', transform: 'translateX(-50%)',
+                      zIndex: 1000, background: 'rgba(15, 20, 25, 0.98)', 
+                      backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                      padding: '1.2rem', borderRadius: '24px', 
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      boxShadow: '0 20px 50px rgba(0,0,0,0.7)',
+                      display: 'flex', flexDirection: 'column', gap: '0.8rem',
+                      animation: 'slideInY 0.2s ease-out'
                     }}
                   >
-                    <div style={{ 
-                      width: '50px', height: '50px', borderRadius: '50%',
-                      background: 'rgba(255, 255, 255, 0.15)', border: '1px solid rgba(255,255,255,0.2)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem'
-                    }}>✎</div>
+                    <HexColorPicker 
+                      color={c} 
+                      onChange={(newColor) => updateColor(i, newColor.toUpperCase())} 
+                    />
+                    <div style={{
+                      fontSize: '0.9rem', color: '#a777e3', fontWeight: 'bold', 
+                      textAlign: 'center', fontFamily: 'monospace', letterSpacing: '1px'
+                    }}>
+                      {c}
+                    </div>
                   </div>
                 )}
               </div>
-              <ColorTextInput colorHex={c} format={colorFormat} onChange={(newHex) => updateColor(i, newHex)} formatColorString={formatColorString} />
+
+              <ColorTextInput 
+                colorHex={c} 
+                format={colorFormat} 
+                onChange={(newColor) => updateColor(i, newColor)}
+                formatColorString={formatColorString}
+              />
             </div>
           ))}
         </div>
