@@ -603,6 +603,7 @@ export default function Home() {
           .toast-item {
             animation: slideIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
           }
+          .color-circle-wrapper:hover .go-to-palette-badge { opacity: 1 !important; pointer-events: auto !important; }
           @keyframes slideInY {
             from { transform: translateY(-10px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
@@ -846,6 +847,33 @@ export default function Home() {
         <div style={{ display: 'flex', gap: '3rem', alignItems: 'center', marginTop: '2.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
           {colors.map((c, i) => (
             <div key={i} className="color-circle-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center', position: 'relative' }}>
+              {/* Etiqueta flotante "Ir a la paleta" */}
+              {colors.length > 1 && (
+                <div 
+                  className="go-to-palette-badge"
+                  onClick={() => document.getElementById(`palette-${i}`)?.scrollIntoView({ behavior: 'smooth' })}
+                  style={{
+                    position: 'absolute', top: '-1.8rem', left: '50%', transform: 'translateX(-50%)',
+                    whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.1)', 
+                    backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+                    padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem',
+                    color: '#fff', fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.2)',
+                    cursor: 'pointer', transition: 'all 0.3s', opacity: 0, pointerEvents: 'none',
+                    zIndex: 50, boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+                    e.currentTarget.style.transform = 'translateX(-50%) scale(1.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                    e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
+                  }}
+                >
+                  Ir a la paleta
+                </div>
+              )}
+              
               <div 
                 style={{
                   position: 'relative', width: '130px', height: '130px', borderRadius: '50%',
@@ -946,7 +974,7 @@ export default function Home() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', marginTop: '2rem' }}>
         {colors.map((c, idx) => (
-          <div key={idx}>
+          <div key={idx} id={`palette-${idx}`}>
             <PaletteSection 
               baseHex={c} 
               user={user} 
