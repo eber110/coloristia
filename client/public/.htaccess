@@ -1,0 +1,9 @@
+Options -MultiViews
+RewriteEngine On
+
+# Si el archivo o directorio existe, servirlo directamente
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Redirigir todo lo demás al index.html para React Router
+RewriteRule ^ index.html [QSA,L]

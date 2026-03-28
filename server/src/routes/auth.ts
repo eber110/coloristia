@@ -36,11 +36,12 @@ router.post('/register', async (req, res) => {
     
     res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
   } catch (error) {
-  
-    res.status(500).json({ error: 'Error al registrar usuario' });
-    
+
+    const msg = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: 'Error al registrar usuario', detail: msg });
+
   }
-  
+
 });
 
 router.post('/login', async (req, res) => {
@@ -68,11 +69,12 @@ router.post('/login', async (req, res) => {
     
     res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
   } catch (error) {
-  
-    res.status(500).json({ error: 'Error al iniciar sesión' });
-    
+
+    const msg = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: 'Error al iniciar sesión', detail: msg });
+
   }
-  
+
 });
 
 export default router;

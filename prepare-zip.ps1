@@ -13,10 +13,9 @@ npm install
 npm run build
 
 # 2. Compilar Backend y Generar Prisma
-Write-Host "`n[2/4] Compilando Backend y Generando Prisma..." -ForegroundColor Yellow
+Write-Host "`n[2/4] Compilando Backend..." -ForegroundColor Yellow
 Set-Location "$root/server"
 npm install
-npx prisma generate
 npm run build
 
 # 3. Crear ZIP del Frontend
