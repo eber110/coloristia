@@ -315,7 +315,49 @@ export default function Home() {
 
   const [savedPalettes, setSavedPalettes] = useState<Palette[]>([]);
   const [pickerOpenIndex, setPickerOpenIndex] = useState<number | null>(null);
+  const [isScrolledPastPalette0, setIsScrolledPastPalette0] = useState(false);
+  const [isMouseActive, setIsMouseActive] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
+  const mouseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Efecto para el botón ToUp inteligente
+  useEffect(() => {
+    
+    const handleScroll = () => {
+      const palette0 = document.getElementById('palette-0');
+      if (palette0) {
+        // Mostramos el botón cuando superamos el final de la primera paleta
+        setIsScrolledPastPalette0(window.scrollY > (palette0.offsetTop + palette0.offsetHeight - 100));
+      } else {
+        setIsScrolledPastPalette0(false);
+      }
+    };
+
+    const handleMouseMove = () => {
+      setIsMouseActive(true);
+      if (mouseTimerRef.current) clearTimeout(mouseTimerRef.current);
+      mouseTimerRef.current = setTimeout(() => {
+        setIsMouseActive(false);
+      }, 3000);
+    };
+
+    const handleMouseLeave = () => {
+      setIsMouseActive(false);
+      if (mouseTimerRef.current) clearTimeout(mouseTimerRef.current);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseleave', handleMouseLeave);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseleave', handleMouseLeave);
+      if (mouseTimerRef.current) clearTimeout(mouseTimerRef.current);
+    };
+    
+  }, []);
 
   // Efecto para cerrar el color picker al hacer clic fuera
   useEffect(() => {
@@ -1075,6 +1117,40 @@ export default function Home() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Botón ToUp Inteligente */}
+      {isScrolledPastPalette0 && (
+        <button 
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          style={{
+            position: 'fixed', bottom: '2.5rem', right: '3rem',
+            width: '56px', height: '56px', borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.1)', 
+            backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            color: '#fff', fontSize: '1.2rem', cursor: 'pointer',
+            zIndex: 10000, transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+            opacity: isMouseActive ? 1 : 0,
+            transform: isMouseActive ? 'translateY(0) scale(1)' : 'translateY(30px) scale(0.7)',
+            pointerEvents: isMouseActive ? 'auto' : 'none',
+            boxShadow: '0 15px 45px rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            outline: 'none'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+            e.currentTarget.style.transform = 'translateY(-3px) scale(1.05)';
+            e.currentTarget.style.boxShadow = '0 15px 45px rgba(110, 142, 251, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+            e.currentTarget.style.transform = 'translateY(0) scale(1)';
+            e.currentTarget.style.boxShadow = '0 15px 45px rgba(0,0,0,0.6)';
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="26" height="26" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+        </button>
       )}
     </div>
   );
