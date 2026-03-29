@@ -11,7 +11,6 @@
   "keywords": [],
   "author": "Eber Sánchez Cornejo <contacto@ebersanchez.cl> (https://www.ebersanchez.cl)",
   "license": "ISC",
-  "type": "module",
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^3.0.3",

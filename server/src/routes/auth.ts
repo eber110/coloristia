@@ -1,40 +1,35 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import { getDb } from '../db.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'coloristia_secret_key';
 
 router.post('/register', async (req, res) => {
 
   try {
+
     const { email, password, role } = req.body;
-    
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    
+    const db = getDb();
+
+    const existingUser = db.prepare('SELECT id FROM User WHERE email = ?').get(email);
     if (existingUser) {
-    
       return res.status(400).json({ error: 'El usuario ya existe' });
-      
     }
-    
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    
     const userRole = role === 'PREMIUM' ? 'PREMIUM' : 'REGISTERED';
-    
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        role: userRole,
-      },
-    });
-    
-    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-    
-    res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
+
+    const result = db.prepare(
+      'INSERT INTO User (email, password, role) VALUES (?, ?, ?)'
+    ).run(email, hashedPassword, userRole);
+
+    const userId = Number(result.lastInsertRowid);
+    const token = jwt.sign({ userId, role: userRole }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({ token, user: { id: userId, email, role: userRole } });
+
   } catch (error) {
 
     const msg = error instanceof Error ? error.message : String(error);
@@ -47,27 +42,24 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
 
   try {
+
     const { email, password } = req.body;
-    
-    const user = await prisma.user.findUnique({ where: { email } });
-    
+    const db = getDb();
+
+    const user = db.prepare('SELECT * FROM User WHERE email = ?').get(email) as any;
+
     if (!user) {
-    
       return res.status(400).json({ error: 'Credenciales inválidas' });
-      
     }
-    
+
     const validPassword = await bcrypt.compare(password, user.password);
-    
     if (!validPassword) {
-    
       return res.status(400).json({ error: 'Credenciales inválidas' });
-      
     }
-    
+
     const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-    
     res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
+
   } catch (error) {
 
     const msg = error instanceof Error ? error.message : String(error);

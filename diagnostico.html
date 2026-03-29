@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coloristia - Diagnóstico del Servidor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: monospace; background: #0d0d1a; color: #e0e0ff; padding: 2rem; }
+    h1 { color: #a78bfa; font-size: 1.5rem; margin-bottom: 1.5rem; }
+    h2 { color: #7c3aed; font-size: 1rem; margin-bottom: 0.5rem; }
+    .card { background: #1a1a2e; border: 1px solid #2d2d4a; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    .row { display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid #2d2d4a; }
+    .row:last-child { border-bottom: none; }
+    .label { color: #9ca3af; }
+    .value { color: #e0e0ff; word-break: break-all; max-width: 60%; text-align: right; }
+    .ok { color: #34d399; }
+    .error { color: #f87171; }
+    .pending { color: #fbbf24; }
+    button { background: #7c3aed; color: white; border: none; padding: 0.8rem 2rem;
+             border-radius: 6px; cursor: pointer; font-size: 1rem; margin-bottom: 1.5rem; }
+    button:hover { background: #6d28d9; }
+    button:disabled { background: #4b5563; cursor: wait; }
+    pre { white-space: pre-wrap; word-break: break-all; font-size: 0.8rem; color: #f87171; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>🔬 Coloristia — Diagnóstico del Servidor</h1>
+
+  <button id="btn" onclick="runDiagnostic()">▶ Ejecutar Diagnóstico</button>
+
+  <div id="results" style="display:none">
+
+    <div class="card">
+      <h2>🖥️ Servidor Node.js</h2>
+      <div class="row"><span class="label">Conexión con API</span><span class="value" id="api_status">...</span></div>
+      <div class="row"><span class="label">Versión de Node</span><span class="value" id="node_version">...</span></div>
+      <div class="row"><span class="label">Plataforma</span><span class="value" id="platform">...</span></div>
+      <div class="row"><span class="label">Arquitectura</span><span class="value" id="arch">...</span></div>
+    </div>
+
+    <div class="card">
+      <h2>⚙️ Variables de Entorno</h2>
+      <div class="row"><span class="label">DATABASE_URL</span><span class="value" id="env_db">...</span></div>
+      <div class="row"><span class="label">Valor DATABASE_URL</span><span class="value" id="env_db_val">...</span></div>
+      <div class="row"><span class="label">JWT_SECRET</span><span class="value" id="env_jwt">...</span></div>
+      <div class="row"><span class="label">PORT</span><span class="value" id="env_port">...</span></div>
+      <div class="row"><span class="label">NODE_ENV</span><span class="value" id="env_mode">...</span></div>
+    </div>
+
+    <div class="card">
+      <h2>🗄️ Prisma y Base de Datos</h2>
+      <div class="row"><span class="label">Estado de Prisma</span><span class="value" id="prisma_status">...</span></div>
+      <div class="row"><span class="label">Conexión DB</span><span class="value" id="db_status">...</span></div>
+      <div class="row"><span class="label">Usuarios registrados</span><span class="value" id="db_users">...</span></div>
+      <div id="prisma_error" style="display:none"><pre id="prisma_detail"></pre></div>
+    </div>
+
+    <div class="card" id="raw_card">
+      <h2>📋 Respuesta completa (JSON)</h2>
+      <pre id="raw_json" style="color:#7dd3fc"></pre>
+    </div>
+
+  </div>
+
+  <script>
+    async function runDiagnostic() {
+
+      const btn = document.getElementById('btn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Ejecutando...';
+      document.getElementById('results').style.display = 'block';
+
+      const set = (id, val, ok) => {
+        const el = document.getElementById(id);
+        el.textContent = val;
+        if (ok === true) el.className = 'value ok';
+        else if (ok === false) el.className = 'value error';
+        else el.className = 'value pending';
+      };
+
+      try {
+
+        let apiUrl = '/api/debug';
+
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+
+        set('api_status', '✅ Servidor respondió correctamente (200 OK)', true);
+        set('node_version', data.node_version || '?');
+        set('platform', data.platform || '?');
+        set('arch', data.arch || '?');
+
+        // Entorno
+        const env = data.env || {};
+        set('env_db', env.DATABASE_URL || '?', env.DATABASE_URL?.includes('✅'));
+        set('env_db_val', env.DATABASE_URL_value || '?');
+        set('env_jwt', env.JWT_SECRET || '?', env.JWT_SECRET?.includes('✅'));
+        set('env_port', env.PORT || '?');
+        set('env_mode', env.NODE_ENV || '(no definido)');
+
+        // Prisma
+        const prismaOk = data.prisma?.status?.includes('✅');
+        set('prisma_status', data.prisma?.status || '?', prismaOk);
+        if (!prismaOk && data.prisma?.detail) {
+          document.getElementById('prisma_error').style.display = 'block';
+          document.getElementById('prisma_detail').textContent = data.prisma.detail;
+        }
+
+        // DB
+        const dbOk = data.database?.status?.includes('✅');
+        set('db_status', data.database?.status || '?', dbOk);
+        set('db_users', dbOk ? `${data.database.users_count} usuario(s)` : '—', dbOk ? true : null);
+
+        // Raw
+        document.getElementById('raw_json').textContent = JSON.stringify(data, null, 2);
+
+      } catch (err) {
+
+        set('api_status', `❌ Sin conexión: ${err.message}`, false);
+        document.getElementById('raw_json').textContent = err.toString();
+
+      }
+
+      btn.disabled = false;
+      btn.textContent = '🔄 Ejecutar de Nuevo';
+
+    }
+  </script>
+</body>
+</html>

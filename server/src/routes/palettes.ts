@@ -1,133 +1,134 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
+import { getDb } from '../db.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'coloristia_secret_key';
 
-// Middleware simple de auth
+// --- Middleware de autenticación ---
 const authMiddleware = (req: any, res: any, next: any) => {
 
   const token = req.header('Authorization')?.replace('Bearer ', '');
-  
+
   if (!token) {
-  
     return res.status(401).json({ error: 'No token, authorization denied' });
-    
   }
-  
+
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
-  } catch (err) {
-  
+  } catch {
     res.status(401).json({ error: 'Token is not valid' });
-    
   }
-  
+
 };
 
-router.post('/', authMiddleware, async (req: any, res: any) => {
+// Guardar paleta
+router.post('/', authMiddleware, (req: any, res: any) => {
 
   try {
+
     const { name, colors } = req.body;
     const userId = req.user.userId;
-    const role = req.user.role;
-    
-    // Validación por roles controlada en el frontend por ahora
-    const palette = await prisma.palette.create({
-      data: {
-        name,
-        colors: JSON.stringify(colors),
-        userId,
-      },
-    });
-    
-    res.json(palette);
+
+    const result = db().prepare(
+      'INSERT INTO Palette (name, colors, userId) VALUES (?, ?, ?)'
+    ).run(name, JSON.stringify(colors), userId);
+
+    const palette = db().prepare('SELECT * FROM Palette WHERE id = ?').get(result.lastInsertRowid) as any;
+
+    res.json({ ...palette, colors: JSON.parse(palette.colors) });
+
   } catch (error) {
-  
-    res.status(500).json({ error: 'Error saving palette' });
-    
+
+    const msg = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: 'Error saving palette', detail: msg });
+
   }
-  
+
 });
 
-router.get('/', authMiddleware, async (req: any, res: any) => {
+// Obtener paletas del usuario
+router.get('/', authMiddleware, (req: any, res: any) => {
 
   try {
-    const palettes = await prisma.palette.findMany({
-      where: { userId: req.user.userId },
-      orderBy: { createdAt: 'desc' },
-    });
-    
-    const parsedPalettes = palettes.map(p => ({
-      ...p,
-      colors: JSON.parse(p.colors)
-    }));
-    
-    res.json(parsedPalettes);
+
+    const palettes = db().prepare(
+      'SELECT * FROM Palette WHERE userId = ? ORDER BY createdAt DESC'
+    ).all(req.user.userId) as any[];
+
+    res.json(palettes.map(p => ({ ...p, colors: JSON.parse(p.colors) })));
+
   } catch (error) {
-  
-    res.status(500).json({ error: 'Error fetching palettes' });
-    
+
+    const msg = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: 'Error fetching palettes', detail: msg });
+
   }
-  
+
 });
 
 // Eliminar paleta
-router.delete('/:id', authMiddleware, async (req: any, res: any) => {
+router.delete('/:id', authMiddleware, (req: any, res: any) => {
 
   try {
-    const { id } = req.params;
+
+    const id = Number(req.params.id);
     const userId = req.user.userId;
 
-    const palette = await prisma.palette.findFirst({
-      where: { id: Number(id), userId }
-    });
+    const palette = db().prepare('SELECT id FROM Palette WHERE id = ? AND userId = ?').get(id, userId);
 
     if (!palette) {
       return res.status(404).json({ error: 'Palette not found or unauthorized' });
     }
 
-    await prisma.palette.delete({
-      where: { id: Number(id) }
-    });
-
+    db().prepare('DELETE FROM Palette WHERE id = ?').run(id);
     res.json({ message: 'Palette deleted successfully' });
+
   } catch (error) {
-    res.status(500).json({ error: 'Error deleting palette' });
+
+    const msg = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: 'Error deleting palette', detail: msg });
+
   }
-  
+
 });
 
 // Renombrar paleta
-router.put('/:id', authMiddleware, async (req: any, res: any) => {
+router.put('/:id', authMiddleware, (req: any, res: any) => {
 
   try {
-    const { id } = req.params;
+
+    const id = Number(req.params.id);
     const { name } = req.body;
     const userId = req.user.userId;
 
-    const palette = await prisma.palette.findFirst({
-      where: { id: Number(id), userId }
-    });
+    const palette = db().prepare('SELECT id FROM Palette WHERE id = ? AND userId = ?').get(id, userId);
 
     if (!palette) {
       return res.status(404).json({ error: 'Palette not found or unauthorized' });
     }
 
-    const updatedPalette = await prisma.palette.update({
-      where: { id: Number(id) },
-      data: { name }
-    });
+    db().prepare('UPDATE Palette SET name = ? WHERE id = ?').run(name, id);
+    const updated = db().prepare('SELECT * FROM Palette WHERE id = ?').get(id) as any;
 
-    res.json(updatedPalette);
+    res.json({ ...updated, colors: JSON.parse(updated.colors) });
+
   } catch (error) {
-    res.status(500).json({ error: 'Error updating palette' });
+
+    const msg = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: 'Error updating palette', detail: msg });
+
   }
-  
+
 });
+
+// Función auxiliar para no repetir getDb()
+function db() {
+
+  return getDb();
+
+}
 
 export default router;
