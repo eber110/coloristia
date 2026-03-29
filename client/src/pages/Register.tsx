@@ -12,6 +12,9 @@ export default function Register() {
   const [role] = useState<'REGISTERED' | 'PREMIUM'>('REGISTERED');
   const [error, setError] = useState('');
 
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+
   // Validadores para el registro
   const isPasswordValid = 
     password.length >= 8 && 
@@ -33,14 +36,13 @@ export default function Register() {
     
     try {
     
-      const response = await axios.post(`${API_BASE_URL}/auth/register`, {
+      await axios.post(`${API_BASE_URL}/auth/register`, {
         email,
         password,
         role
       });
       
-      login(response.data.user, response.data.token);
-      navigate('/');
+      setIsRegistered(true);
       
     } catch (err: any) {
     
@@ -50,74 +52,131 @@ export default function Register() {
     
   };
 
+  const handleVerify = async (e: React.FormEvent) => {
+  
+    e.preventDefault();
+    setError('');
+    
+    try {
+    
+      const response = await axios.post(`${API_BASE_URL}/auth/verify-email`, {
+        email,
+        token: verificationCode
+      });
+      
+      login(response.data.user, response.data.token);
+      navigate('/');
+      
+    } catch (err: any) {
+    
+      setError(err.response?.data?.error || 'Error al verificar el código');
+      
+    }
+    
+  };
+
   return (
     <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4rem' }}>
-      <form onSubmit={handleSubmit} className="glass-panel" style={{ width: '400px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>Registro de Usuario</h2>
-        
-        {error && <div style={{ color: '#ff6b6b', textAlign: 'center' }}>{error}</div>}
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <label>Email</label>
-          <input 
-            type="email" 
-            className="input-glass" 
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-          />
-        </div>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <label>Contraseña</label>
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+      {isRegistered ? (
+        <form onSubmit={handleVerify} className="glass-panel" style={{ width: '400px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>Verificar Correo</h2>
+          
+          {error && <div style={{ color: '#ff6b6b', textAlign: 'center' }}>{error}</div>}
+          
+          <p style={{ textAlign: 'center', fontSize: '0.9rem', opacity: 0.9 }}>
+            Hemos enviado un código de 6 dígitos a <br/><strong>{email}</strong>
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label>Código de Verificación</label>
             <input 
-              type={showPassword ? "text" : "password"} 
+              type="text" 
               className="input-glass" 
-              value={password}
-              onChange={e => setPassword(e.target.value)}
+              value={verificationCode}
+              onChange={e => setVerificationCode(e.target.value)}
               required
-              style={{ width: '100%', paddingRight: '2.5rem', boxSizing: 'border-box' }}
+              style={{ textAlign: 'center', letterSpacing: '0.5rem', fontSize: '1.2rem', fontWeight: 'bold' }}
+              maxLength={6}
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              style={{
-                position: 'absolute',
-                right: '0.5rem',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '1.2rem',
-                opacity: 0.8
-              }}
-              title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-            >
-              {showPassword ? "🔒" : "👁️"}
-            </button>
           </div>
-          {password.length > 0 && !isPasswordValid && (
-            <div style={{ fontSize: '0.85rem', color: '#ff6b6b' }}>
-              La contraseña debe tener entre 8 y 20 caracteres, incluir al menos una mayúscula, un carácter especial y sin espacios.
+          
+          <button 
+            type="submit" 
+            className="button-primary" 
+            style={{ marginTop: '1rem', opacity: verificationCode.length === 6 ? 1 : 0.5 }}
+            disabled={verificationCode.length !== 6}
+          >
+            Verificar Cuenta
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={handleSubmit} className="glass-panel" style={{ width: '400px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>Registro de Usuario</h2>
+          
+          {error && <div style={{ color: '#ff6b6b', textAlign: 'center' }}>{error}</div>}
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label>Email</label>
+            <input 
+              type="email" 
+              className="input-glass" 
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label>Contraseña</label>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input 
+                type={showPassword ? "text" : "password"} 
+                className="input-glass" 
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                style={{ width: '100%', paddingRight: '2.5rem', boxSizing: 'border-box' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '0.5rem',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '1.2rem',
+                  opacity: 0.8
+                }}
+                title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              >
+                {showPassword ? "🔒" : "👁️"}
+              </button>
             </div>
-          )}
-        </div>
-        
-        {/* Selección de membresía oculta temporalmente */}
-        
-        <button 
-          type="submit" 
-          className="button-primary" 
-          style={{ 
-            marginTop: '1rem', 
-            opacity: isFormValid ? 1 : 0.5, 
-            cursor: isFormValid ? 'pointer' : 'not-allowed' 
-          }}
-          disabled={!isFormValid}
-        >
-          Crear Cuenta
-        </button>
-      </form>
+            {password.length > 0 && !isPasswordValid && (
+              <div style={{ fontSize: '0.85rem', color: '#ff6b6b' }}>
+                La contraseña debe tener entre 8 y 20 caracteres, incluir al menos una mayúscula, un carácter especial y sin espacios.
+              </div>
+            )}
+          </div>
+          
+          {/* Selección de membresía oculta temporalmente */}
+          
+          <button 
+            type="submit" 
+            className="button-primary" 
+            style={{ 
+              marginTop: '1rem', 
+              opacity: isFormValid ? 1 : 0.5, 
+              cursor: isFormValid ? 'pointer' : 'not-allowed' 
+            }}
+            disabled={!isFormValid}
+          >
+            Crear Cuenta
+          </button>
+        </form>
+      )}
     </div>
   );
   
