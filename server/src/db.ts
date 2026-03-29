@@ -28,11 +28,13 @@ export function getDb(): DatabaseSync {
     // Crear tablas si no existen (idempotente)
     db.exec(`
       CREATE TABLE IF NOT EXISTS User (
-        id        INTEGER PRIMARY KEY AUTOINCREMENT,
-        email     TEXT    UNIQUE NOT NULL,
-        password  TEXT    NOT NULL,
-        role      TEXT    NOT NULL DEFAULT 'REGISTERED',
-        createdAt TEXT    NOT NULL DEFAULT (datetime('now'))
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        email            TEXT    UNIQUE NOT NULL,
+        password         TEXT    NOT NULL,
+        role             TEXT    NOT NULL DEFAULT 'REGISTERED',
+        isVerified       INTEGER NOT NULL DEFAULT 0,
+        verificationToken TEXT,
+        createdAt        TEXT    NOT NULL DEFAULT (datetime('now'))
       );
 
       CREATE TABLE IF NOT EXISTS Palette (

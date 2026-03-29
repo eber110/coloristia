@@ -8,8 +8,20 @@ export default function Register() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [role] = useState<'REGISTERED' | 'PREMIUM'>('REGISTERED');
   const [error, setError] = useState('');
+
+  // Validadores para el registro
+  const isPasswordValid = 
+    password.length >= 8 && 
+    password.length <= 20 && 
+    /[A-Z]/.test(password) && 
+    /[!@#$%^&*(),.?":{}|<>]/.test(password) && 
+    !/\s/.test(password);
+
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isFormValid = isEmailValid && isPasswordValid;
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -58,18 +70,53 @@ export default function Register() {
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <label>Contraseña</label>
-          <input 
-            type="password" 
-            className="input-glass" 
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-          />
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <input 
+              type={showPassword ? "text" : "password"} 
+              className="input-glass" 
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              style={{ width: '100%', paddingRight: '2.5rem', boxSizing: 'border-box' }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: 'absolute',
+                right: '0.5rem',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '1.2rem',
+                opacity: 0.8
+              }}
+              title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            >
+              {showPassword ? "🔒" : "👁️"}
+            </button>
+          </div>
+          {password.length > 0 && !isPasswordValid && (
+            <div style={{ fontSize: '0.85rem', color: '#ff6b6b' }}>
+              La contraseña debe tener entre 8 y 20 caracteres, incluir al menos una mayúscula, un carácter especial y sin espacios.
+            </div>
+          )}
         </div>
         
         {/* Selección de membresía oculta temporalmente */}
         
-        <button type="submit" className="button-primary" style={{ marginTop: '1rem' }}>Crear Cuenta</button>
+        <button 
+          type="submit" 
+          className="button-primary" 
+          style={{ 
+            marginTop: '1rem', 
+            opacity: isFormValid ? 1 : 0.5, 
+            cursor: isFormValid ? 'pointer' : 'not-allowed' 
+          }}
+          disabled={!isFormValid}
+        >
+          Crear Cuenta
+        </button>
       </form>
     </div>
   );
