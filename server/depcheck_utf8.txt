@@ -1,0 +1,6 @@
+﻿Unused dependencies
+* @prisma/client
+Unused devDependencies
+* nodemon
+* prisma
+* ts-node
