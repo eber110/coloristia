@@ -1,0 +1,13 @@
+{
+    "priority": [
+        "aaSvgStore.js",
+        "component.js",
+        "config.js",
+        "querys.js"
+    ],
+    "exclude": [],
+    "functions": {
+        "defer": {},
+        "async": {}
+    }
+}

@@ -1,0 +1,15 @@
+/vendor/
+.env
+/App/Public/Min/
+/Cache/*
+!/Cache/.gitkeep
+/Logs/*
+!/Logs/.gitkeep
+/Uploads/*
+!/Uploads/.gitkeep
+/Database/*
+!/Database/.gitkeep
+*.mmdb
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
