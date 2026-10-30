@@ -621,12 +621,33 @@ const state = {
 };
 
 /**
- * Displays a non-intrusive toast notification.
+ * Escapes special HTML characters to prevent XSS.
+ *
+ * @param {string} str
+ * @returns {string}
+ */
+export function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/**
+ * Displays a non-intrusive toast notification using framework toast or fallback.
  *
  * @param {string} message Message text to display.
- * @param {string} type 'success' | 'error' | 'info'
+ * @param {string} type 'success' | 'error' | 'info' | 'warning'
  */
 export function showToast(message, type = "success") {
+  if (typeof window.toast === "function") {
+    window.toast(message, type, 3000, true);
+    return;
+  }
+
   let toastContainer = document.getElementById("toastContainer");
   if (!toastContainer) {
     toastContainer = document.createElement("div");
@@ -635,14 +656,14 @@ export function showToast(message, type = "success") {
     document.body.appendChild(toastContainer);
   }
 
-  const toast = document.createElement("div");
-  toast.className = `toast toast-${type} animate-fade-in`;
-  toast.innerHTML = `<span>${message}</span>`;
-  toastContainer.appendChild(toast);
+  const toastEl = document.createElement("div");
+  toastEl.className = `toast toast-${type} animate-fade-in`;
+  toastEl.innerHTML = `<span>${message}</span>`;
+  toastContainer.appendChild(toastEl);
 
   setTimeout(() => {
-    toast.classList.add("toast-exit");
-    setTimeout(() => toast.remove(), 300);
+    toastEl.classList.add("toast-exit");
+    setTimeout(() => toastEl.remove(), 300);
   }, 2800);
 }
 
@@ -682,53 +703,88 @@ export async function copyToClipboard(text) {
 }
 
 /**
+ * Renders the hero seed swatches (working seed circle and pinned/loaded palette reference circle).
+ */
+export function renderHeroSeed() {
+  const heroSwatch = document.getElementById("heroColorSwatch");
+  const heroLabel = document.getElementById("heroColorLabel");
+  const baseColorLabel = document.getElementById("baseColorLabel");
+  const quickColorTrigger = document.getElementById("quickColorTrigger");
+  const quickColorCircle = document.getElementById("quickColorCircle");
+
+  const rgb = hexToRgb(state.currentColor);
+  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  const isPureBlackOrWhite = hsl.l <= 2 || hsl.l >= 98;
+
+  if (heroSwatch) {
+    heroSwatch.style.backgroundColor = state.currentColor;
+    if (hsl.l >= 98) {
+      heroSwatch.style.boxShadow = "0 10px 40px -10px rgba(255,255,255,0.7), 0 0 35px rgba(255,255,255,0.5)";
+      heroSwatch.style.borderColor = "#ffffff";
+    } else if (hsl.l <= 2) {
+      heroSwatch.style.boxShadow = "0 10px 40px -10px rgba(0,0,0,0.9), 0 0 25px rgba(255,255,255,0.15)";
+      heroSwatch.style.borderColor = "rgba(255, 255, 255, 0.4)";
+    } else {
+      heroSwatch.style.boxShadow = `0 10px 40px -10px ${state.currentColor}88, 0 0 25px ${state.currentColor}44`;
+      heroSwatch.style.borderColor = "rgba(255, 255, 255, 0.95)";
+    }
+  }
+
+  if (heroLabel) {
+    heroLabel.textContent = state.currentColor;
+  }
+  if (baseColorLabel) {
+    baseColorLabel.textContent = isPureBlackOrWhite ? `${state.currentColor} (Neutro)` : state.currentColor;
+  }
+  if (quickColorTrigger) {
+    quickColorTrigger.style.backgroundColor = state.currentColor;
+    quickColorTrigger.style.boxShadow = `0 0 14px ${state.currentColor}88`;
+  }
+  if (quickColorCircle) {
+    quickColorCircle.style.backgroundColor = state.currentColor;
+  }
+
+  // Loaded or pinned reference palette circle
+  const loadedBox = document.getElementById("heroLoadedPaletteBox");
+  const loadedSwatch = document.getElementById("heroLoadedSwatch");
+  const loadedLabel = document.getElementById("heroLoadedLabel");
+
+  if (loadedBox) {
+    if (state.loadedPalette && state.loadedPalette.hex_color) {
+      loadedBox.style.display = "flex";
+      if (loadedSwatch) {
+        loadedSwatch.style.backgroundColor = state.loadedPalette.hex_color;
+        loadedSwatch.style.boxShadow = `0 10px 30px -8px ${state.loadedPalette.hex_color}aa, 0 0 20px ${state.loadedPalette.hex_color}55`;
+        loadedSwatch.title = `Paleta cargada: ${state.loadedPalette.project_name || state.loadedPalette.hex_color}`;
+      }
+      if (loadedLabel) {
+        loadedLabel.textContent = state.loadedPalette.hex_color;
+        loadedLabel.title = state.loadedPalette.project_name || state.loadedPalette.hex_color;
+      }
+    } else {
+      loadedBox.style.display = "none";
+    }
+  }
+}
+
+/**
  * Renders chromatic harmonies grid and hero preview.
  */
 export function renderHarmonies() {
   const data = generateAllHarmonies(state.currentColor, state.variations, "family");
 
-  // Update central seed swatch preview and labels
-  const heroSwatch = document.getElementById("heroColorSwatch");
-  const heroLabel = document.getElementById("heroColorLabel");
-  const baseColorLabel = document.getElementById("baseColorLabel");
+  // Update hero swatches and labels
+  renderHeroSeed();
+
   const projectNameInput = document.getElementById("projectNameInput");
-  const quickColorTrigger = document.getElementById("quickColorTrigger");
-  const quickColorCircle = document.getElementById("quickColorCircle");
-
-  const isPureBlackOrWhite = (data.seed.hsl.l <= 2) || (data.seed.hsl.l >= 98);
-
-  if (heroSwatch) {
-    heroSwatch.style.backgroundColor = data.seed.hex;
-    if (data.seed.hsl.l >= 98) {
-      heroSwatch.style.boxShadow = `0 10px 40px -10px rgba(255,255,255,0.7), 0 0 35px rgba(255,255,255,0.5)`;
-      heroSwatch.style.borderColor = "#ffffff";
-    } else if (data.seed.hsl.l <= 2) {
-      heroSwatch.style.boxShadow = `0 10px 40px -10px rgba(0,0,0,0.9), 0 0 25px rgba(255,255,255,0.15)`;
-      heroSwatch.style.borderColor = "rgba(255, 255, 255, 0.4)";
-    } else {
-      heroSwatch.style.boxShadow = `0 10px 40px -10px ${data.seed.hex}88, 0 0 25px ${data.seed.hex}44`;
-      heroSwatch.style.borderColor = "rgba(255, 255, 255, 0.95)";
-    }
-  }
-  if (heroLabel) {
-    heroLabel.textContent = data.seed.hex;
-  }
-  if (baseColorLabel) {
-    baseColorLabel.textContent = isPureBlackOrWhite ? `${data.seed.hex} (Neutro)` : data.seed.hex;
-  }
-  if (quickColorTrigger) {
-    quickColorTrigger.style.backgroundColor = data.seed.hex;
-    quickColorTrigger.style.boxShadow = `0 0 14px ${data.seed.hex}88`;
-  }
-  if (quickColorCircle) {
-    quickColorCircle.style.backgroundColor = data.seed.hex;
-  }
   if (projectNameInput && (!projectNameInput.value || projectNameInput.dataset.auto === "true")) {
     projectNameInput.value = `Paleta Base ${data.seed.hex}`;
     projectNameInput.dataset.auto = "true";
   }
 
-  // 5 primary harmony columns visible by default as seen in image 1
+  const isPureBlackOrWhite = (data.seed.hsl.l <= 2) || (data.seed.hsl.l >= 98);
+
+  // 5 primary harmony columns visible by default
   const primaryKeys = [
     "monochromatic",
     "complementary",
@@ -748,12 +804,10 @@ export function renderHarmonies() {
     "goldenRatio"
   ];
 
-  // If pure black or white, only show monochromatic harmony
-  const targetKeys = isPureBlackOrWhite
-    ? ["monochromatic"]
-    : (state.selectedHarmonyFilter === "extra"
-      ? extraKeys
-      : (state.selectedHarmonyFilter === "all" ? [...primaryKeys, ...extraKeys] : primaryKeys));
+  // Keep ALL columns rendered; when black or white is selected, mark non-monochromatic columns as deactivated
+  const targetKeys = state.selectedHarmonyFilter === "extra"
+    ? extraKeys
+    : (state.selectedHarmonyFilter === "all" ? [...primaryKeys, ...extraKeys] : primaryKeys);
 
   const container = document.getElementById("harmoniesGrid");
   if (!container) return;
@@ -764,34 +818,51 @@ export function renderHarmonies() {
     const item = data.harmonies[key];
     if (!item) return;
 
+    const isColumnDisabled = isPureBlackOrWhite && key !== "monochromatic";
+
     const column = document.createElement("div");
-    column.className = "harmony-column flex-column gap12";
+    column.className = `harmony-column flex-column gap12 ${isColumnDisabled ? "harmony-column-disabled" : ""}`;
 
     const title = document.createElement("h3");
     title.className = "harmony-title text-center";
-    title.textContent = isPureBlackOrWhite && key === "monochromatic" ? "Monocromática (Modo Neutro)" : item.rule.name;
+    if (isColumnDisabled) {
+      title.innerHTML = `${item.rule.name} <span class="badge-disabled">(Desactivada)</span>`;
+    } else if (isPureBlackOrWhite && key === "monochromatic") {
+      title.innerHTML = `${item.rule.name} <span class="badge-mono">(Modo Neutro)</span>`;
+    } else {
+      title.textContent = item.rule.name;
+    }
     column.appendChild(title);
 
     const cardsContainer = document.createElement("div");
     cardsContainer.className = "cards-stack flex-column gap8 w100";
 
-    item.colors.forEach((colorObj) => {
+    item.colors.forEach((colorObj, m) => {
       const card = document.createElement("button");
       card.type = "button";
       card.className = "color-card";
       card.style.backgroundColor = colorObj.hex;
       card.style.color = colorObj.textColor;
+      card.style.setProperty("--card-index", m);
+
+      if (isColumnDisabled) {
+        card.setAttribute("disabled", "true");
+        card.setAttribute("aria-disabled", "true");
+        card.title = "Esta paleta está desactivada para tonos neutros.";
+      }
 
       const formatted = formatColorValue(colorObj, state.colorSystem);
 
       card.innerHTML = `
         <span class="color-value font-mono">${formatted}</span>
-        <span class="copy-hint">Copiar</span>
+        <span class="copy-hint">${isColumnDisabled ? "Inactiva" : "Copiar"}</span>
       `;
 
-      card.addEventListener("click", () => {
-        copyToClipboard(formatted);
-      });
+      if (!isColumnDisabled) {
+        card.addEventListener("click", () => {
+          copyToClipboard(formatted);
+        });
+      }
 
       cardsContainer.appendChild(card);
     });
@@ -826,15 +897,19 @@ export function setSeedColor(hex, syncPicker = true) {
 }
 
 /**
- * Modifies variation count between 6 and 16.
+ * Modifies variation count between 6 and 15, persisting preference in localStorage.
  *
  * @param {number} delta Step change (+1 or -1).
  */
 export function changeVariations(delta) {
   const current = state.variations;
-  const next = Math.max(6, Math.min(16, current + delta));
+  const next = Math.max(6, Math.min(15, current + delta));
   if (next !== current) {
     state.variations = next;
+    try {
+      localStorage.setItem("coloristia_variations", String(next));
+    } catch (_) {}
+
     const countDisplay = document.getElementById("variationCountDisplay");
     if (countDisplay) {
       countDisplay.textContent = next;
@@ -844,33 +919,7 @@ export function changeVariations(delta) {
 }
 
 /**
- * Verifies if the color can be changed.
- * If a saved palette from the user database is currently loaded, prompts for confirmation.
- *
- * @param {string} action Description of the intended action in Spanish.
- * @returns {boolean} True if confirmed or if no saved palette is loaded; false if cancelled.
- */
-export function canChangeColor(action = "generar otro color") {
-  if (!state.activeLoadedProject) {
-    return true;
-  }
-
-  const projectName = state.activeLoadedProject.project_name || "Paleta guardada";
-  const confirmed = window.confirm(
-    `Tienes cargada la paleta guardada "${projectName}".\n\n¿Deseas ${action}?`
-  );
-
-  if (confirmed) {
-    state.activeLoadedProject = null;
-    renderProjectsList();
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * Generates a vibrant random seed color and applies it.
+ * Generates a vibrant random seed color and applies it directly without blocking.
  */
 export function generateRandomColor() {
   const h = Math.floor(Math.random() * 360);
@@ -956,13 +1005,53 @@ export async function saveCurrentProject() {
 }
 
 /**
- * Deletes a saved project from the database.
+ * Renames a saved project in the database.
  *
- * @param {number} projectId
+ * @param {number|string} projectId
+ * @param {string} newName
+ */
+export async function renameProject(projectId, newName) {
+  try {
+    const formData = new FormData();
+    formData.append("id", projectId);
+    formData.append("project_name", newName);
+    formData.append("_token", getCsrfToken());
+
+    const response = await fetch("/proyectos/renombrar", {
+      method: "POST",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest",
+        "X-CSRF-TOKEN": getCsrfToken()
+      },
+      body: formData
+    });
+
+    const res = await response.json();
+    if (res.status === "success") {
+      const target = state.projects.find((p) => Number(p.id) === Number(projectId));
+      if (target) {
+        target.project_name = newName;
+      }
+      if (state.loadedPalette && Number(state.loadedPalette.id) === Number(projectId)) {
+        state.loadedPalette.project_name = newName;
+        renderHeroSeed();
+      }
+      renderProjectsList();
+      showToast(res.message, "success");
+    } else {
+      showToast(res.message || "Error al renombrar el proyecto.", "error");
+    }
+  } catch (err) {
+    showToast("Error de conexión al renombrar.", "error");
+  }
+}
+
+/**
+ * Deletes a saved project from the database immediately without browser alert/confirm.
+ *
+ * @param {number|string} projectId
  */
 export async function deleteProject(projectId) {
-  if (!confirm("¿Deseas eliminar este proyecto?")) return;
-
   try {
     const formData = new FormData();
     formData.append("id", projectId);
@@ -979,17 +1068,18 @@ export async function deleteProject(projectId) {
 
     const res = await response.json();
     if (res.status === "success") {
-      if (state.activeLoadedProject && Number(state.activeLoadedProject.id) === Number(projectId)) {
-        state.activeLoadedProject = null;
+      if (state.loadedPalette && Number(state.loadedPalette.id) === Number(projectId)) {
+        state.loadedPalette = null;
+        renderHeroSeed();
       }
       state.projects = state.projects.filter((p) => Number(p.id) !== Number(projectId));
       renderProjectsList();
       showToast(res.message, "success");
     } else {
-      showToast(res.message || "Error al eliminar.", "error");
+      showToast(res.message || "Error al eliminar el proyecto.", "error");
     }
   } catch (err) {
-    showToast("Error de conexión.", "error");
+    showToast("Error de conexión al eliminar.", "error");
   }
 }
 
@@ -1013,29 +1103,40 @@ export function renderProjectsList() {
   container.innerHTML = "";
 
   state.projects.forEach((proj) => {
-    const isLoaded = state.activeLoadedProject && Number(state.activeLoadedProject.id) === Number(proj.id);
+    const isLoaded = state.loadedPalette && Number(state.loadedPalette.id) === Number(proj.id);
     const item = document.createElement("div");
-    item.className = `project-item flex-row items-center justify-between gap12 p12 br8 ${isLoaded ? "project-item-active" : ""}`;
+    item.className = `project-item flex-row items-center justify-between gap16 p12 br8 ${isLoaded ? "project-item-active" : ""}`;
 
     item.innerHTML = `
-      <div class="flex-row items-center gap12">
-        <div class="project-color-preview br50" style="background-color: ${proj.hex_color}; width: 34px; height: 34px; border: 2px solid rgba(255,255,255,0.2);"></div>
-        <div class="flex-column">
+      <div class="flex-row items-center gap14" style="flex: 1; min-width: 0;">
+        <div class="project-swatch-box br8" style="background-color: ${proj.hex_color}; width: 44px; height: 44px; flex-shrink: 0; box-shadow: 0 2px 8px ${proj.hex_color}66;"></div>
+        <div class="flex-column" style="min-width: 0;">
           <div class="flex-row items-center gap8">
-            <span class="project-name bold600 text-white">${proj.project_name}</span>
+            <span class="project-name bold600 text-white font-truncate">${escapeHtml(proj.project_name)}</span>
+            <button type="button" class="btn-icon-rename" title="Renombrar paleta" data-id="${proj.id}" aria-label="Renombrar">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            </button>
             ${isLoaded ? '<span class="badge-active font-mono text-xs" style="background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.4); padding: 1px 6px; border-radius: 4px; font-weight: 500;">Cargada</span>' : ''}
           </div>
-          <span class="project-hex font-mono text-xs text-inactive">${proj.hex_color} • ${proj.created_at || ""}</span>
+          <span class="project-date font-mono text-xs text-inactive">${proj.created_at || ""}</span>
         </div>
       </div>
-      <div class="flex-row items-center gap8">
-        <button type="button" class="btn btn-sm btn-outline load-project-btn" data-hex="${proj.hex_color}">${isLoaded ? 'Recargar' : 'Cargar'}</button>
-        <button type="button" class="btn btn-sm btn-danger delete-project-btn" data-id="${proj.id}">Eliminar</button>
+      <div class="flex-row items-center gap10 flex-shrink-0">
+        <button type="button" class="btn-load-palette" data-id="${proj.id}">
+          ${isLoaded ? "Activa" : "Cargar"}
+        </button>
+        <button type="button" class="btn-delete-palette" data-id="${proj.id}" title="Eliminar paleta" aria-label="Eliminar">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
       </div>
     `;
 
-    item.querySelector(".load-project-btn").addEventListener("click", () => {
-      state.activeLoadedProject = {
+    // Click "Cargar"
+    item.querySelector(".btn-load-palette").addEventListener("click", () => {
+      state.loadedPalette = {
         id: proj.id,
         project_name: proj.project_name,
         hex_color: proj.hex_color
@@ -1049,11 +1150,24 @@ export function renderProjectsList() {
 
       setSeedColor(proj.hex_color);
       closeModal("projectsModal");
-      showToast(`Cargada paleta: ${proj.project_name}`);
+      renderHeroSeed();
       renderProjectsList();
+      showToast(`Paleta "${proj.project_name}" cargada como referencia.`);
     });
 
-    item.querySelector(".delete-project-btn").addEventListener("click", () => {
+    // Click rename button
+    const renameBtn = item.querySelector(".btn-icon-rename");
+    if (renameBtn) {
+      renameBtn.addEventListener("click", async () => {
+        const newName = window.prompt("Nuevo nombre para esta paleta:", proj.project_name);
+        if (newName && newName.trim() && newName.trim() !== proj.project_name) {
+          await renameProject(proj.id, newName.trim());
+        }
+      });
+    }
+
+    // Click delete trash icon
+    item.querySelector(".btn-delete-palette").addEventListener("click", () => {
       deleteProject(proj.id);
     });
 
@@ -1142,17 +1256,11 @@ export function syncPickerFromColor(hex) {
 }
 
 /**
- * Opens the in-app custom color picker anchored to a trigger element.
+ * Opens the in-app custom color picker anchored to a trigger element without blocking.
  *
  * @param {HTMLElement} triggerEl
  */
 export function openColorPicker(triggerEl) {
-  if (state.activeLoadedProject) {
-    if (!canChangeColor("seleccionar otro color")) {
-      return;
-    }
-  }
-
   const popover = document.getElementById("coloristiaPickerPopover");
   if (!popover) return;
 
@@ -1315,6 +1423,22 @@ export function initColoristia() {
     state.projects = window.COLORISTIA_DATA.projects || [];
   }
 
+  // Load variation count preference from localStorage (default 15, between 6 and 15)
+  try {
+    const savedVars = localStorage.getItem("coloristia_variations");
+    if (savedVars) {
+      const parsed = parseInt(savedVars, 10);
+      if (!isNaN(parsed) && parsed >= 6 && parsed <= 15) {
+        state.variations = parsed;
+      }
+    }
+  } catch (_) {}
+
+  const variationCountDisplay = document.getElementById("variationCountDisplay");
+  if (variationCountDisplay) {
+    variationCountDisplay.textContent = state.variations;
+  }
+
   // Generate a random seed color on every page load / refresh
   const randH = Math.floor(Math.random() * 360);
   const randS = Math.floor(65 + Math.random() * 30);
@@ -1359,13 +1483,91 @@ export function initColoristia() {
     heroLabel.addEventListener("click", () => toggleColorPicker(heroSwatch));
   }
 
-  // Random color button
+  // Pin current color as reference button (+)
+  const pinBtn = document.getElementById("pinColorBtn");
+  if (pinBtn) {
+    pinBtn.addEventListener("click", () => {
+      state.loadedPalette = {
+        id: null,
+        project_name: "Paleta fijada",
+        hex_color: state.currentColor
+      };
+      renderHeroSeed();
+      showToast(`Color ${state.currentColor} fijado como referencia.`);
+    });
+  }
+
+  // Clear reference colors button
+  const clearPinnedBtn = document.getElementById("clearPinnedBtn");
+  if (clearPinnedBtn) {
+    clearPinnedBtn.addEventListener("click", () => {
+      if (state.loadedPalette) {
+        state.loadedPalette = null;
+        renderHeroSeed();
+        renderProjectsList();
+        showToast("Colores de referencia borrados.", "info");
+      }
+    });
+  }
+
+  // Hero reference circle actions: apply loaded palette as working color
+  const goToLoadedPaletteBtn = document.getElementById("goToLoadedPaletteBtn");
+  const heroLoadedSwatch = document.getElementById("heroLoadedSwatch");
+  const applyLoadedAsWorking = () => {
+    if (state.loadedPalette && state.loadedPalette.hex_color) {
+      setSeedColor(state.loadedPalette.hex_color);
+      const projectNameInput = document.getElementById("projectNameInput");
+      if (projectNameInput && state.loadedPalette.project_name) {
+        projectNameInput.value = state.loadedPalette.project_name;
+        projectNameInput.dataset.auto = "false";
+      }
+      showToast(`Aplicado como color de trabajo: ${state.loadedPalette.hex_color}`);
+    }
+  };
+
+  if (goToLoadedPaletteBtn) {
+    goToLoadedPaletteBtn.addEventListener("click", applyLoadedAsWorking);
+  }
+  if (heroLoadedSwatch) {
+    heroLoadedSwatch.addEventListener("click", applyLoadedAsWorking);
+  }
+
+  // Hero reference circle actions: dismiss reference
+  const dismissLoadedPaletteBtn = document.getElementById("dismissLoadedPaletteBtn");
+  if (dismissLoadedPaletteBtn) {
+    dismissLoadedPaletteBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      state.loadedPalette = null;
+      renderHeroSeed();
+      renderProjectsList();
+      showToast("Paleta de referencia retirada.", "info");
+    });
+  }
+
+  // Hero reference circle actions: edit name
+  const editLoadedPaletteNameBtn = document.getElementById("editLoadedPaletteNameBtn");
+  if (editLoadedPaletteNameBtn) {
+    editLoadedPaletteNameBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (!state.loadedPalette) return;
+      const currentName = state.loadedPalette.project_name || "Paleta";
+      const newName = window.prompt("Editar nombre de la paleta:", currentName);
+      if (newName && newName.trim() && newName.trim() !== currentName) {
+        if (state.loadedPalette.id) {
+          await renameProject(state.loadedPalette.id, newName.trim());
+        } else {
+          state.loadedPalette.project_name = newName.trim();
+          renderHeroSeed();
+          showToast("Nombre actualizado.", "success");
+        }
+      }
+    });
+  }
+
+  // Random color button: generates a vibrant random color directly without confirmation
   const randomBtn = document.getElementById("randomColorBtn");
   if (randomBtn) {
     randomBtn.addEventListener("click", () => {
-      if (!canChangeColor("generar un color aleatorio")) {
-        return;
-      }
       generateRandomColor();
     });
   }
@@ -1489,6 +1691,23 @@ export function initColoristia() {
         showToast("Error de conexión al registrar.", "error");
       }
     });
+  }
+
+  // Initialize Framework JS plugins (FloatingScroll & Modal)
+  if (typeof window.floatingScroll === "function") {
+    try {
+      window.floatingScroll(8, "var(--color-primary-brand, #8b5cf6)", "");
+    } catch (_) {}
+  } else if (typeof window.FloatingScroll === "function") {
+    try {
+      new window.FloatingScroll(8, "var(--color-primary-brand, #8b5cf6)", "");
+    } catch (_) {}
+  }
+
+  if (typeof window.modal === "function") {
+    try {
+      window.modal();
+    } catch (_) {}
   }
 
   // Initial harmony rendering

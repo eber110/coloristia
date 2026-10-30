@@ -29,5 +29,6 @@ Route::post("/usuario/sistema-color", [AuthControllers::class, "updateColorSyste
 Route::prefix("/proyectos")->group(function () {
   Route::post("/guardar", [ProjectControllers::class, "save"]);
   Route::get("/listar", [ProjectControllers::class, "list"]);
+  Route::post("/renombrar", [ProjectControllers::class, "rename"]);
   Route::post("/eliminar", [ProjectControllers::class, "delete"]);
 });

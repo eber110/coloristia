@@ -100,6 +100,59 @@ class ProjectControllers extends Control
   }
 
   /**
+   * Updates a project's name.
+   *
+   * @return never
+   */
+  public function rename(): never
+  {
+    Session::start();
+
+    if (!AuthModule::check()) {
+      ResponseModule::json([
+        "status"  => "error",
+        "message" => "Debes iniciar sesión para realizar esta acción."
+      ], 401);
+    }
+
+    if (!SecurityModule::verifyCsrf()) {
+      ResponseModule::json([
+        "status"  => "error",
+        "message" => "Token de seguridad inválido."
+      ], 403);
+    }
+
+    $projectId = (int)($_POST["id"] ?? 0);
+    $newName = trim($_POST["project_name"] ?? "");
+
+    if ($projectId <= 0 || empty($newName)) {
+      ResponseModule::json([
+        "status"  => "error",
+        "message" => "Datos inválidos para actualizar el nombre."
+      ], 422);
+    }
+
+    $userId = AuthModule::id();
+    $project = ProjectModels::getById($projectId, $userId);
+
+    if (!$project) {
+      ResponseModule::json([
+        "status"  => "error",
+        "message" => "Proyecto no encontrado."
+      ], 404);
+    }
+
+    ProjectModels::updateProject($projectId, $userId, $newName, $project["hex_color"]);
+    LogModels::record("info", "project.renamed", "Project ID {$projectId} renamed to {$newName}", null, $userId);
+
+    ResponseModule::json([
+      "status"  => "success",
+      "message" => "Nombre de paleta actualizado correctamente.",
+      "project_name" => $newName
+    ]);
+  }
+
+  /**
    * Deletes a project owned by the active user.
    *
    * @return never
