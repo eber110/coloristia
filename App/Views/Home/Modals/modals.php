@@ -11,9 +11,10 @@
 <!-- MODAL: MY PALETTES -->
 <div id="projectsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="projectsModalTitle">
   <div class="modal-backdrop" data-close-modal="projectsModal"></div>
+  <button type="button" class="modal-overlay-close" data-close-modal="projectsModal" aria-label="Cerrar">&times;</button>
   <div class="modal-card">
     <div class="modal-card-head">
-      <h3 id="projectsModalTitle" class="modal-card-title">Mis Paletas Guardadas</h3>
+      <h3 id="projectsModalTitle" class="modal-card-title bold600">Mis Paletas Guardadas</h3>
       <button type="button" class="modal-close-btn" data-close-modal="projectsModal" aria-label="Cerrar">&times;</button>
     </div>
     <div class="modal-card-body">

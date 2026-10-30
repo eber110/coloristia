@@ -612,12 +612,12 @@ export function generateAllHarmonies(seedHex, variations = 6, sortMode = "family
  */
 const state = {
   currentColor: "#C42127",
-  variations: 6,
+  variations: 15,
   colorSystem: "hex",
   isLoggedIn: false,
   projects: [],
   selectedHarmonyFilter: "primary",
-  activeLoadedProject: null
+  loadedPalette: null
 };
 
 /**

@@ -1,14 +1,19 @@
 {
     "priority": [
         "aaSvgStore.js",
-        "component.js",
         "config.js",
         "querys.js",
+        "floatingScroll.js",
+        "animations.js",
+        "modal.js",
+        "toast.js",
         "coloristia.js"
     ],
     "exclude": [],
     "functions": {
         "defer": {
+            "floatingScroll": [8, "var(--color-primary-brand, #272F46)"],
+            "modal": [],
             "initColoristia": []
         },
         "async": {}
