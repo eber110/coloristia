@@ -503,7 +503,8 @@ const state = {
   colorSystem: "hex",
   isLoggedIn: false,
   projects: [],
-  selectedHarmonyFilter: "primary"
+  selectedHarmonyFilter: "primary",
+  activeLoadedProject: null
 };
 
 /**
@@ -715,13 +716,39 @@ export function changeVariations(delta) {
 }
 
 /**
- * Generates a vibrant random seed color.
+ * Verifies if the color can be changed.
+ * If a saved palette from the user database is currently loaded, prompts for confirmation.
+ *
+ * @param {string} action Description of the intended action in Spanish.
+ * @returns {boolean} True if confirmed or if no saved palette is loaded; false if cancelled.
+ */
+export function canChangeColor(action = "generar otro color") {
+  if (!state.activeLoadedProject) {
+    return true;
+  }
+
+  const projectName = state.activeLoadedProject.project_name || "Paleta guardada";
+  const confirmed = window.confirm(
+    `Tienes cargada la paleta guardada "${projectName}".\n\n¿Deseas ${action}?`
+  );
+
+  if (confirmed) {
+    state.activeLoadedProject = null;
+    renderProjectsList();
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Generates a vibrant random seed color and applies it.
  */
 export function generateRandomColor() {
   const h = Math.floor(Math.random() * 360);
   const s = Math.floor(65 + Math.random() * 30);
   const l = Math.floor(40 + Math.random() * 25);
-  const rgb = hexToRgb(formatColorValue({ h, s, l }, "hex"));
+  const rgb = hslToRgb(h, s, l);
   const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
   setSeedColor(hex);
 }
@@ -824,6 +851,9 @@ export async function deleteProject(projectId) {
 
     const res = await response.json();
     if (res.status === "success") {
+      if (state.activeLoadedProject && Number(state.activeLoadedProject.id) === Number(projectId)) {
+        state.activeLoadedProject = null;
+      }
       state.projects = state.projects.filter((p) => Number(p.id) !== Number(projectId));
       renderProjectsList();
       showToast(res.message, "success");
@@ -855,27 +885,44 @@ export function renderProjectsList() {
   container.innerHTML = "";
 
   state.projects.forEach((proj) => {
+    const isLoaded = state.activeLoadedProject && Number(state.activeLoadedProject.id) === Number(proj.id);
     const item = document.createElement("div");
-    item.className = "project-item flex-row items-center justify-between gap12 p12 br8";
+    item.className = `project-item flex-row items-center justify-between gap12 p12 br8 ${isLoaded ? "project-item-active" : ""}`;
 
     item.innerHTML = `
       <div class="flex-row items-center gap12">
         <div class="project-color-preview br50" style="background-color: ${proj.hex_color}; width: 34px; height: 34px; border: 2px solid rgba(255,255,255,0.2);"></div>
         <div class="flex-column">
-          <span class="project-name bold600 text-white">${proj.project_name}</span>
+          <div class="flex-row items-center gap8">
+            <span class="project-name bold600 text-white">${proj.project_name}</span>
+            ${isLoaded ? '<span class="badge-active font-mono text-xs" style="background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.4); padding: 1px 6px; border-radius: 4px; font-weight: 500;">Cargada</span>' : ''}
+          </div>
           <span class="project-hex font-mono text-xs text-inactive">${proj.hex_color} • ${proj.created_at || ""}</span>
         </div>
       </div>
       <div class="flex-row items-center gap8">
-        <button type="button" class="btn btn-sm btn-outline load-project-btn" data-hex="${proj.hex_color}">Cargar</button>
+        <button type="button" class="btn btn-sm btn-outline load-project-btn" data-hex="${proj.hex_color}">${isLoaded ? 'Recargar' : 'Cargar'}</button>
         <button type="button" class="btn btn-sm btn-danger delete-project-btn" data-id="${proj.id}">Eliminar</button>
       </div>
     `;
 
     item.querySelector(".load-project-btn").addEventListener("click", () => {
+      state.activeLoadedProject = {
+        id: proj.id,
+        project_name: proj.project_name,
+        hex_color: proj.hex_color
+      };
+
+      const projectNameInput = document.getElementById("projectNameInput");
+      if (projectNameInput) {
+        projectNameInput.value = proj.project_name;
+        projectNameInput.dataset.auto = "false";
+      }
+
       setSeedColor(proj.hex_color);
       closeModal("projectsModal");
       showToast(`Cargada paleta: ${proj.project_name}`);
+      renderProjectsList();
     });
 
     item.querySelector(".delete-project-btn").addEventListener("click", () => {
@@ -931,6 +978,13 @@ export function initColoristia() {
     state.projects = window.COLORISTIA_DATA.projects || [];
   }
 
+  // Generate a random seed color on every page load / refresh
+  const randH = Math.floor(Math.random() * 360);
+  const randS = Math.floor(65 + Math.random() * 30);
+  const randL = Math.floor(40 + Math.random() * 25);
+  const initRgb = hslToRgb(randH, randS, randL);
+  state.currentColor = rgbToHex(initRgb.r, initRgb.g, initRgb.b);
+
   // Color system dropdown event listener
   const systemSelect = document.getElementById("colorSystemSelect");
   if (systemSelect) {
@@ -957,15 +1011,31 @@ export function initColoristia() {
   const heroLabel = document.getElementById("heroColorLabel");
 
   if (nativePicker) {
+    nativePicker.value = state.currentColor;
     nativePicker.addEventListener("input", (e) => {
+      if (state.activeLoadedProject) {
+        if (!canChangeColor("seleccionar otro color")) {
+          nativePicker.value = state.currentColor;
+          return;
+        }
+      }
       setSeedColor(e.target.value);
     });
     nativePicker.addEventListener("change", (e) => {
+      if (state.activeLoadedProject) {
+        if (!canChangeColor("seleccionar otro color")) {
+          nativePicker.value = state.currentColor;
+          return;
+        }
+      }
       setSeedColor(e.target.value);
     });
   }
 
   const triggerPicker = () => {
+    if (!canChangeColor("seleccionar otro color")) {
+      return;
+    }
     if (nativePicker) nativePicker.click();
   };
 
@@ -973,6 +1043,9 @@ export function initColoristia() {
   if (heroSwatch) heroSwatch.addEventListener("click", triggerPicker);
   if (heroLabel) {
     heroLabel.addEventListener("click", () => {
+      if (!canChangeColor("escribir otro color")) {
+        return;
+      }
       const input = prompt("Introduce un código de color HEX (ej: #C42127):", state.currentColor);
       if (input) setSeedColor(input);
     });
@@ -981,7 +1054,12 @@ export function initColoristia() {
   // Random color button
   const randomBtn = document.getElementById("randomColorBtn");
   if (randomBtn) {
-    randomBtn.addEventListener("click", () => generateRandomColor());
+    randomBtn.addEventListener("click", () => {
+      if (!canChangeColor("generar un color aleatorio")) {
+        return;
+      }
+      generateRandomColor();
+    });
   }
 
   // Save project button

@@ -543,6 +543,22 @@ body {
   cursor: pointer;
 }
 
+.project-item {
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.2s ease;
+}
+
+.project-item:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.project-item-active {
+  background-color: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
 .btn-outline {
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.2);
