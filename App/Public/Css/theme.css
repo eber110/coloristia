@@ -45,8 +45,14 @@ body {
 
 /* Header & Navbar */
 .coloristia-nav {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
   padding: 18px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  box-sizing: border-box;
 }
 
 .brand-title {
@@ -57,9 +63,9 @@ body {
 }
 
 .nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
 }
 
 /* Control Panel Section */
@@ -304,24 +310,41 @@ body {
 /* Harmonies Columns Grid */
 .harmonies-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
+  width: 100%;
   align-items: start;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1200px) {
+  .harmonies-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .harmonies-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .harmony-column {
-  background-color: rgba(255, 255, 255, 0.015);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   padding: 16px 12px;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .harmony-title {
   font-size: 0.95rem;
   font-weight: 700;
   color: #ffffff;
-  margin: 0 0 14px 0;
+  margin: 0 0 10px 0;
   text-align: center;
   letter-spacing: -0.01em;
 }

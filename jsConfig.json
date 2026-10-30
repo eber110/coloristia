@@ -4,8 +4,7 @@
         "component.js",
         "config.js",
         "querys.js",
-        "colorEngine.js",
-        "coloristiaApp.js"
+        "coloristia.js"
     ],
     "exclude": [],
     "functions": {
