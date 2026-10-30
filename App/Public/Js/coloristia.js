@@ -258,6 +258,83 @@ export function hslToHsv(H, S, L) {
 }
 
 /**
+ * Converts normalized HSV (H: [0, 360), S: [0, 1], V: [0, 1]) to RGB [0, 255].
+ *
+ * @param {number} h Hue in degrees [0, 360)
+ * @param {number} s Saturation [0, 1]
+ * @param {number} v Value [0, 1]
+ * @returns {{r: number, g: number, b: number}}
+ */
+export function hsvNormToRgb(h, s, v) {
+  const normH = normHue(h);
+  const normS = Math.max(0, Math.min(1, s));
+  const normV = Math.max(0, Math.min(1, v));
+
+  const C = normV * normS;
+  const X = C * (1 - Math.abs(((normH / 60) % 2) - 1));
+  const m = normV - C;
+
+  let rPrime = 0, gPrime = 0, bPrime = 0;
+  if (normH >= 0 && normH < 60) {
+    rPrime = C; gPrime = X; bPrime = 0;
+  } else if (normH >= 60 && normH < 120) {
+    rPrime = X; gPrime = C; bPrime = 0;
+  } else if (normH >= 120 && normH < 180) {
+    rPrime = 0; gPrime = C; bPrime = X;
+  } else if (normH >= 180 && normH < 240) {
+    rPrime = 0; gPrime = X; bPrime = C;
+  } else if (normH >= 240 && normH < 300) {
+    rPrime = X; gPrime = 0; bPrime = C;
+  } else {
+    rPrime = C; gPrime = 0; bPrime = X;
+  }
+
+  return {
+    r: Math.round(Math.max(0, Math.min(255, (rPrime + m) * 255))),
+    g: Math.round(Math.max(0, Math.min(255, (gPrime + m) * 255))),
+    b: Math.round(Math.max(0, Math.min(255, (bPrime + m) * 255)))
+  };
+}
+
+/**
+ * Converts RGB [0, 255] to normalized HSV (H: [0, 360), S: [0, 1], V: [0, 1]).
+ *
+ * @param {number} r
+ * @param {number} g
+ * @param {number} b
+ * @returns {{h: number, s: number, v: number}}
+ */
+export function rgbToHsvNorm(r, g, b) {
+  const normR = Math.max(0, Math.min(255, r)) / 255;
+  const normG = Math.max(0, Math.min(255, g)) / 255;
+  const normB = Math.max(0, Math.min(255, b)) / 255;
+
+  const cMax = Math.max(normR, normG, normB);
+  const cMin = Math.min(normR, normG, normB);
+  const delta = cMax - cMin;
+
+  let h = 0;
+  if (delta !== 0) {
+    if (cMax === normR) {
+      h = 60 * (((normG - normB) / delta) % 6);
+    } else if (cMax === normG) {
+      h = 60 * (((normB - normR) / delta) + 2);
+    } else {
+      h = 60 * (((normR - normG) / delta) + 4);
+    }
+  }
+
+  const s = cMax === 0 ? 0 : delta / cMax;
+  const v = cMax;
+
+  return {
+    h: normHue(h),
+    s: Math.max(0, Math.min(1, s)),
+    v: Math.max(0, Math.min(1, v))
+  };
+}
+
+/**
  * Converts RGB to CMYK percentages [0, 100].
  *
  * @param {number} r
@@ -399,6 +476,27 @@ export function generatePalette(H0, S0, L0, harmonyKey = "monochromatic", N = 6,
   // Step 2: Calculate L, S, and Bezold-Brücke micro-rotation per anchor
   const colors = [];
 
+  // Dynamic Lightness Range:
+  // If user chooses an ultra-dark color (L0 <= 25): dark tolerance erased down to L0 (or 0 for black)
+  // If user chooses an ultra-light color (L0 >= 75): light tolerance erased up to L0 (or 100 for white)
+  // If user chooses intermediate (25 < L0 < 75): standard tolerances (15% to 90%)
+  let Lmin = 15;
+  let Lmax = 90;
+
+  if (L0 <= 25) {
+    Lmin = Math.max(0, Math.min(L0, 4));
+    Lmax = 90;
+  } else if (L0 >= 75) {
+    Lmin = 15;
+    Lmax = Math.min(100, Math.max(L0, 96));
+  } else {
+    Lmin = 15;
+    Lmax = 90;
+  }
+
+  // Check if color is neutral grayscale (grays, black, white)
+  const isAchromatic = S0 <= 2;
+
   for (let j = 0; j < effectiveK; j++) {
     const Mj = anchorCounts[j];
     const deltaH = activeShifts[j];
@@ -407,23 +505,38 @@ export function generatePalette(H0, S0, L0, harmonyKey = "monochromatic", N = 6,
       let Ljm;
       if (Mj === 1) {
         Ljm = L0;
+      } else if (j === 0) {
+        // Seed anchor: smoothly interpolate through L0 so the user's selected shade is preserved
+        const mAnchor = Math.max(0, Math.min(Mj - 1, Math.round(((L0 - Lmin) / (Lmax - Lmin || 1)) * (Mj - 1))));
+        if (m === mAnchor) {
+          Ljm = L0;
+        } else if (m < mAnchor) {
+          Ljm = Lmin + (m / (mAnchor || 1)) * (L0 - Lmin);
+        } else {
+          const denom = (Mj - 1 - mAnchor) || 1;
+          Ljm = L0 + ((m - mAnchor) / denom) * (Lmax - L0);
+        }
       } else {
-        const Lmin = 18;
-        const Lmax = 90;
         const deltaL = (Lmax - Lmin) / (Mj - 1);
         Ljm = Lmin + (m * deltaL);
       }
 
       // Parabolic saturation curve
-      const Dcentro = Math.abs(Ljm - 50) / 50;
-      const Sjm = Math.max(15, S0 * (1 - 0.45 * Math.pow(Dcentro, 2)));
+      let Sjm;
+      if (isAchromatic) {
+        Sjm = 0;
+      } else {
+        const Dcentro = Math.abs(Ljm - 50) / 50;
+        const minAllowedS = Math.min(S0, 15);
+        Sjm = Math.max(minAllowedS, S0 * (1 - 0.45 * Math.pow(Dcentro, 2)));
+      }
 
       // Bezold-Brücke effect: natural hue rotation (±6°)
-      const microShift = ((Ljm - 50) / 50) * 6;
+      const microShift = isAchromatic ? 0 : ((Ljm - 50) / 50) * 6;
       let Hjm = normHue(H0 + deltaH + microShift);
 
       // Perceptual brightness compensation for single-anchor yellows/limes/cyans
-      if (Mj === 1 && Hjm >= 45 && Hjm <= 160) {
+      if (Mj === 1 && !isAchromatic && Hjm >= 45 && Hjm <= 160) {
         const factor = Math.max(0, Math.sin(((Hjm - 45) / 115) * Math.PI));
         Ljm = Math.max(10, Ljm - 8 * factor);
       }
@@ -582,15 +695,26 @@ export function renderHarmonies() {
   const quickColorTrigger = document.getElementById("quickColorTrigger");
   const quickColorCircle = document.getElementById("quickColorCircle");
 
+  const isPureBlackOrWhite = (data.seed.hsl.l <= 2) || (data.seed.hsl.l >= 98);
+
   if (heroSwatch) {
     heroSwatch.style.backgroundColor = data.seed.hex;
-    heroSwatch.style.boxShadow = `0 10px 40px -10px ${data.seed.hex}88, 0 0 25px ${data.seed.hex}44`;
+    if (data.seed.hsl.l >= 98) {
+      heroSwatch.style.boxShadow = `0 10px 40px -10px rgba(255,255,255,0.7), 0 0 35px rgba(255,255,255,0.5)`;
+      heroSwatch.style.borderColor = "#ffffff";
+    } else if (data.seed.hsl.l <= 2) {
+      heroSwatch.style.boxShadow = `0 10px 40px -10px rgba(0,0,0,0.9), 0 0 25px rgba(255,255,255,0.15)`;
+      heroSwatch.style.borderColor = "rgba(255, 255, 255, 0.4)";
+    } else {
+      heroSwatch.style.boxShadow = `0 10px 40px -10px ${data.seed.hex}88, 0 0 25px ${data.seed.hex}44`;
+      heroSwatch.style.borderColor = "rgba(255, 255, 255, 0.95)";
+    }
   }
   if (heroLabel) {
     heroLabel.textContent = data.seed.hex;
   }
   if (baseColorLabel) {
-    baseColorLabel.textContent = data.seed.hex;
+    baseColorLabel.textContent = isPureBlackOrWhite ? `${data.seed.hex} (Neutro)` : data.seed.hex;
   }
   if (quickColorTrigger) {
     quickColorTrigger.style.backgroundColor = data.seed.hex;
@@ -624,9 +748,12 @@ export function renderHarmonies() {
     "goldenRatio"
   ];
 
-  const targetKeys = state.selectedHarmonyFilter === "extra"
-    ? extraKeys
-    : (state.selectedHarmonyFilter === "all" ? [...primaryKeys, ...extraKeys] : primaryKeys);
+  // If pure black or white, only show monochromatic harmony
+  const targetKeys = isPureBlackOrWhite
+    ? ["monochromatic"]
+    : (state.selectedHarmonyFilter === "extra"
+      ? extraKeys
+      : (state.selectedHarmonyFilter === "all" ? [...primaryKeys, ...extraKeys] : primaryKeys));
 
   const container = document.getElementById("harmoniesGrid");
   if (!container) return;
@@ -642,7 +769,7 @@ export function renderHarmonies() {
 
     const title = document.createElement("h3");
     title.className = "harmony-title text-center";
-    title.textContent = item.rule.name;
+    title.textContent = isPureBlackOrWhite && key === "monochromatic" ? "Monocromática (Modo Neutro)" : item.rule.name;
     column.appendChild(title);
 
     const cardsContainer = document.createElement("div");
@@ -678,8 +805,9 @@ export function renderHarmonies() {
  * Updates current seed color and triggers re-render.
  *
  * @param {string} hex HEX color code.
+ * @param {boolean} syncPicker Whether to update the custom picker handles.
  */
-export function setSeedColor(hex) {
+export function setSeedColor(hex, syncPicker = true) {
   let clean = hex.trim();
   if (!clean.startsWith("#")) {
     clean = "#" + clean;
@@ -689,9 +817,9 @@ export function setSeedColor(hex) {
   }
 
   state.currentColor = clean.toUpperCase();
-  const picker = document.getElementById("nativeColorPicker");
-  if (picker) {
-    picker.value = state.currentColor;
+
+  if (syncPicker) {
+    syncPickerFromColor(state.currentColor);
   }
 
   renderHarmonies();
@@ -961,6 +1089,215 @@ export function closeModal(modalId) {
   }
 }
 
+// =========================================================================
+// SECTION 2.1: IN-APP CUSTOM COLOR PICKER
+// =========================================================================
+
+const pickerState = {
+  h: 0,
+  s: 1,
+  v: 1,
+  isOpen: false,
+  activeTrigger: null
+};
+
+/**
+ * Synchronizes the color picker UI handles and colors from current HSV.
+ */
+export function syncPickerUI() {
+  const satValBox = document.getElementById("customPickerSatVal");
+  const satValHandle = document.getElementById("customPickerSatValHandle");
+  const hueBar = document.getElementById("customPickerHueBar");
+  const hueHandle = document.getElementById("customPickerHueHandle");
+  const hexInput = document.getElementById("customPickerHexInput");
+
+  if (!satValBox || !satValHandle || !hueBar || !hueHandle) return;
+
+  const pureHueHsl = `hsl(${Math.round(pickerState.h)}, 100%, 50%)`;
+  satValBox.style.backgroundColor = pureHueHsl;
+
+  satValHandle.style.left = `${pickerState.s * 100}%`;
+  satValHandle.style.top = `${(1 - pickerState.v) * 100}%`;
+
+  hueHandle.style.left = `${(pickerState.h / 360) * 100}%`;
+  hueHandle.style.backgroundColor = pureHueHsl;
+
+  if (hexInput && document.activeElement !== hexInput) {
+    hexInput.value = state.currentColor;
+  }
+}
+
+/**
+ * Synchronizes the picker HSV coordinates from a given HEX string.
+ *
+ * @param {string} hex
+ */
+export function syncPickerFromColor(hex) {
+  const rgb = hexToRgb(hex);
+  const hsv = rgbToHsvNorm(rgb.r, rgb.g, rgb.b);
+  pickerState.h = hsv.h;
+  pickerState.s = hsv.s;
+  pickerState.v = hsv.v;
+  syncPickerUI();
+}
+
+/**
+ * Opens the in-app custom color picker anchored to a trigger element.
+ *
+ * @param {HTMLElement} triggerEl
+ */
+export function openColorPicker(triggerEl) {
+  if (state.activeLoadedProject) {
+    if (!canChangeColor("seleccionar otro color")) {
+      return;
+    }
+  }
+
+  const popover = document.getElementById("coloristiaPickerPopover");
+  if (!popover) return;
+
+  pickerState.activeTrigger = triggerEl;
+  pickerState.isOpen = true;
+
+  if (triggerEl.id === "heroColorSwatch" || triggerEl.id === "heroColorLabel") {
+    const heroContainer = document.querySelector(".hero-seed-container");
+    if (heroContainer) {
+      popover.style.top = "100%";
+      popover.style.left = "50%";
+      popover.style.transform = "translateX(-50%) translateY(14px)";
+      heroContainer.appendChild(popover);
+    }
+  } else {
+    const parent = triggerEl.parentElement || triggerEl;
+    parent.style.position = "relative";
+    popover.style.top = "calc(100% + 10px)";
+    popover.style.left = "0";
+    popover.style.transform = "none";
+    parent.appendChild(popover);
+  }
+
+  popover.style.display = "flex";
+  syncPickerFromColor(state.currentColor);
+}
+
+/**
+ * Closes the in-app custom color picker.
+ */
+export function closeColorPicker() {
+  const popover = document.getElementById("coloristiaPickerPopover");
+  if (popover) {
+    popover.style.display = "none";
+  }
+  pickerState.isOpen = false;
+  pickerState.activeTrigger = null;
+}
+
+/**
+ * Toggles the color picker visibility for a trigger element.
+ *
+ * @param {HTMLElement} triggerEl
+ */
+export function toggleColorPicker(triggerEl) {
+  if (pickerState.isOpen && pickerState.activeTrigger === triggerEl) {
+    closeColorPicker();
+  } else {
+    openColorPicker(triggerEl);
+  }
+}
+
+/**
+ * Initializes drag events and listeners for the custom color picker.
+ */
+function initCustomPickerEvents() {
+  const satValBox = document.getElementById("customPickerSatVal");
+  const hueBar = document.getElementById("customPickerHueBar");
+  const hexInput = document.getElementById("customPickerHexInput");
+
+  if (!satValBox || !hueBar) return;
+
+  const updateSatVal = (e) => {
+    const rect = satValBox.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+    const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+
+    pickerState.s = x / rect.width;
+    pickerState.v = 1 - (y / rect.height);
+
+    const rgb = hsvNormToRgb(pickerState.h, pickerState.s, pickerState.v);
+    const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+    setSeedColor(hex, false);
+    syncPickerUI();
+  };
+
+  const updateHue = (e) => {
+    const rect = hueBar.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+    const h = (x / rect.width) * 360;
+
+    pickerState.h = normHue(h);
+
+    const rgb = hsvNormToRgb(pickerState.h, pickerState.s, pickerState.v);
+    const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+    setSeedColor(hex, false);
+    syncPickerUI();
+  };
+
+  const setupDrag = (elem, onUpdate) => {
+    let isDragging = false;
+    elem.addEventListener("pointerdown", (e) => {
+      isDragging = true;
+      try { elem.setPointerCapture(e.pointerId); } catch (_) {}
+      onUpdate(e);
+    });
+    elem.addEventListener("pointermove", (e) => {
+      if (!isDragging) return;
+      onUpdate(e);
+    });
+    const stopDrag = (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      try { elem.releasePointerCapture(e.pointerId); } catch (_) {}
+    };
+    elem.addEventListener("pointerup", stopDrag);
+    elem.addEventListener("pointercancel", stopDrag);
+  };
+
+  setupDrag(satValBox, updateSatVal);
+  setupDrag(hueBar, updateHue);
+
+  if (hexInput) {
+    hexInput.addEventListener("input", (e) => {
+      let val = e.target.value.trim();
+      if (!val.startsWith("#")) val = "#" + val;
+      if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(val)) {
+        setSeedColor(val, false);
+        const rgb = hexToRgb(val);
+        const hsv = rgbToHsvNorm(rgb.r, rgb.g, rgb.b);
+        pickerState.h = hsv.h;
+        pickerState.s = hsv.s;
+        pickerState.v = hsv.v;
+        syncPickerUI();
+      }
+    });
+  }
+
+  // Close on outside pointer click
+  document.addEventListener("pointerdown", (e) => {
+    const popover = document.getElementById("coloristiaPickerPopover");
+    if (!popover || popover.style.display === "none") return;
+    if (popover.contains(e.target)) return;
+    if (e.target.closest("#heroColorSwatch") || e.target.closest("#quickColorTrigger") || e.target.closest("#heroColorLabel")) return;
+    closeColorPicker();
+  });
+
+  // Close on Escape key
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeColorPicker();
+    }
+  });
+}
+
 /**
  * Main application bootstrap function.
  */
@@ -985,6 +1322,9 @@ export function initColoristia() {
   const initRgb = hslToRgb(randH, randS, randL);
   state.currentColor = rgbToHex(initRgb.r, initRgb.g, initRgb.b);
 
+  // Initialize in-app custom color picker
+  initCustomPickerEvents();
+
   // Color system dropdown event listener
   const systemSelect = document.getElementById("colorSystemSelect");
   if (systemSelect) {
@@ -1004,51 +1344,19 @@ export function initColoristia() {
     incBtn.addEventListener("click", () => changeVariations(1));
   }
 
-  // Color pickers and swatches
-  const nativePicker = document.getElementById("nativeColorPicker");
+  // In-app custom color picker triggers
   const quickTrigger = document.getElementById("quickColorTrigger");
   const heroSwatch = document.getElementById("heroColorSwatch");
   const heroLabel = document.getElementById("heroColorLabel");
 
-  if (nativePicker) {
-    nativePicker.value = state.currentColor;
-    nativePicker.addEventListener("input", (e) => {
-      if (state.activeLoadedProject) {
-        if (!canChangeColor("seleccionar otro color")) {
-          nativePicker.value = state.currentColor;
-          return;
-        }
-      }
-      setSeedColor(e.target.value);
-    });
-    nativePicker.addEventListener("change", (e) => {
-      if (state.activeLoadedProject) {
-        if (!canChangeColor("seleccionar otro color")) {
-          nativePicker.value = state.currentColor;
-          return;
-        }
-      }
-      setSeedColor(e.target.value);
-    });
+  if (quickTrigger) {
+    quickTrigger.addEventListener("click", () => toggleColorPicker(quickTrigger));
   }
-
-  const triggerPicker = () => {
-    if (!canChangeColor("seleccionar otro color")) {
-      return;
-    }
-    if (nativePicker) nativePicker.click();
-  };
-
-  if (quickTrigger) quickTrigger.addEventListener("click", triggerPicker);
-  if (heroSwatch) heroSwatch.addEventListener("click", triggerPicker);
+  if (heroSwatch) {
+    heroSwatch.addEventListener("click", () => toggleColorPicker(heroSwatch));
+  }
   if (heroLabel) {
-    heroLabel.addEventListener("click", () => {
-      if (!canChangeColor("escribir otro color")) {
-        return;
-      }
-      const input = prompt("Introduce un código de color HEX (ej: #C42127):", state.currentColor);
-      if (input) setSeedColor(input);
-    });
+    heroLabel.addEventListener("click", () => toggleColorPicker(heroSwatch));
   }
 
   // Random color button

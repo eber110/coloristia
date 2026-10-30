@@ -31,6 +31,3 @@
     _part("Home.footer");
   ?>
 </div>
-
-<!-- Hidden native color input for direct system picker -->
-<input type="color" id="nativeColorPicker" value="#C42127" style="display: none;" aria-hidden="true">
