@@ -7,27 +7,27 @@ use App\Controllers\ProjectControllers;
 use App\Middleware\VisitMiddleware;
 
 /**
- * Definición de rutas principales de Coloristia.
+ * Main route definitions for Coloristia.
  */
 
-// Rutas públicas con middleware de registro de visitas
+// Public routes with visit tracking middleware
 Route::middleware([VisitMiddleware::class])->group(function () {
   Route::get("/", [HomeControllers::class, "home"]);
 });
 
-// Rutas de autenticación y preferencias
-Route::prefix("/auth")->group(function () {
-  Route::post("/login", [AuthControllers::class, "login"]);
-  Route::post("/register", [AuthControllers::class, "register"]);
-  Route::post("/logout", [AuthControllers::class, "logout"]);
-  Route::get("/logout", [AuthControllers::class, "logout"]);
+// Authentication and user preferences routes
+Route::prefix("/autenticacion")->group(function () {
+  Route::post("/ingresar", [AuthControllers::class, "login"]);
+  Route::post("/registro", [AuthControllers::class, "register"]);
+  Route::post("/salir", [AuthControllers::class, "logout"]);
+  Route::get("/salir", [AuthControllers::class, "logout"]);
 });
 
-Route::post("/user/color-system", [AuthControllers::class, "updateColorSystem"]);
+Route::post("/usuario/sistema-color", [AuthControllers::class, "updateColorSystem"]);
 
-// Rutas de gestión de proyectos de paletas
-Route::prefix("/projects")->group(function () {
-  Route::post("/save", [ProjectControllers::class, "save"]);
-  Route::get("/list", [ProjectControllers::class, "list"]);
-  Route::post("/delete", [ProjectControllers::class, "delete"]);
+// Color project management routes
+Route::prefix("/proyectos")->group(function () {
+  Route::post("/guardar", [ProjectControllers::class, "save"]);
+  Route::get("/listar", [ProjectControllers::class, "list"]);
+  Route::post("/eliminar", [ProjectControllers::class, "delete"]);
 });

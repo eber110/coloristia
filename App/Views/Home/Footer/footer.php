@@ -1,12 +1,12 @@
 <?php
 /**
- * Pie de página oficial de Coloristia.
+ * Official footer component for Coloristia.
  */
 ?>
 <footer class="coloristia-footer">
   <div class="coloristia-container">
     <div class="footer-grid">
-      <!-- Columna 1: Marca y descripción -->
+      <!-- Column 1: Brand & description -->
       <div class="flex-column gap12">
         <span class="brand-title" style="font-size: 1.15rem;">Coloristia</span>
         <p class="text-xs text-muted" style="line-height: 1.6; max-width: 360px; margin: 0;">
@@ -14,7 +14,7 @@
         </p>
       </div>
 
-      <!-- Columna 2: Enlaces Rápidos -->
+      <!-- Column 2: Quick Links -->
       <div class="flex-column gap10">
         <span class="text-xs font-bold text-white uppercase tracking-wider">Enlaces Rápidos</span>
         <div class="flex-column gap8 text-xs text-muted">
@@ -24,7 +24,7 @@
         </div>
       </div>
 
-      <!-- Columna 3: Contacto -->
+      <!-- Column 3: Contact & Copyright -->
       <div class="flex-column gap10">
         <span class="text-xs font-bold text-white uppercase tracking-wider">Contacto</span>
         <div class="flex-column gap8 text-xs text-muted">

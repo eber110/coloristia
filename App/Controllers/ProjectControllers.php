@@ -11,12 +11,12 @@ use App\Models\ProjectModels;
 use App\Models\LogModels;
 
 /**
- * Controlador para la gestión de proyectos de paletas cromáticas guardadas.
+ * Controller for managing saved color palette projects.
  */
 class ProjectControllers extends Control
 {
   /**
-   * Guarda un nuevo proyecto con su color base.
+   * Saves a new project with its base color.
    *
    * @return never
    */
@@ -56,14 +56,14 @@ class ProjectControllers extends Control
     $projectId = ProjectModels::saveProject($userId, $projectName, $hexColor);
 
     if (!$projectId) {
-      LogModels::record("error", "project.save_failed", "Fallo al guardar proyecto '{$projectName}'", null, $userId);
+      LogModels::record("error", "project.save_failed", "Failed to save project '{$projectName}'", null, $userId);
       ResponseModule::json([
         "status"  => "error",
         "message" => "Error al guardar el proyecto en la base de datos."
       ], 500);
     }
 
-    LogModels::record("info", "project.saved", "Proyecto guardado: {$projectName} ({$hexColor})", null, $userId);
+    LogModels::record("info", "project.saved", "Project saved: {$projectName} ({$hexColor})", null, $userId);
 
     $savedProject = ProjectModels::getById($projectId, $userId);
 
@@ -75,7 +75,7 @@ class ProjectControllers extends Control
   }
 
   /**
-   * Obtiene la lista de todos los proyectos del usuario activo.
+   * Returns list of projects belonging to the active user.
    *
    * @return never
    */
@@ -100,7 +100,7 @@ class ProjectControllers extends Control
   }
 
   /**
-   * Elimina un proyecto existente perteneciente al usuario.
+   * Deletes a project owned by the active user.
    *
    * @return never
    */
@@ -140,7 +140,7 @@ class ProjectControllers extends Control
       ], 404);
     }
 
-    LogModels::record("info", "project.deleted", "Proyecto ID {$projectId} eliminado", null, $userId);
+    LogModels::record("info", "project.deleted", "Project ID {$projectId} deleted", null, $userId);
 
     ResponseModule::json([
       "status"  => "success",

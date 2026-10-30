@@ -7,14 +7,14 @@ use PDO;
 use Exception;
 
 /**
- * Clase para la inicialización y migración de tablas SQLite de Coloristia.
+ * Setup and schema migration utility for Coloristia SQLite database.
  */
 class SQLiteSetup
 {
   /**
-   * Crea las tablas necesarias en la base de datos SQLite si no existen.
+   * Creates required database tables in SQLite if they do not exist.
    *
-   * @return array Resultado de la operación por cada tabla.
+   * @return array Status of setup operations per table.
    */
   public static function setupTables(): array
   {
@@ -25,13 +25,13 @@ class SQLiteSetup
       $pdo = $conexion->getPdo();
 
       if (!$pdo) {
-        return ["error" => "No se pudo obtener la conexión PDO a SQLite."];
+        return ["error" => "Could not obtain PDO connection for SQLite."];
       }
 
-      // Habilitar llaves foráneas en SQLite
+      // Enable foreign keys constraint enforcement in SQLite
       $pdo->exec("PRAGMA foreign_keys = ON;");
 
-      // 1. Tabla de Usuarios
+      // 1. Users table
       $sqlUsers = "CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL UNIQUE,
@@ -45,7 +45,7 @@ class SQLiteSetup
       $pdo->exec($sqlUsers);
       $results["users"] = "OK";
 
-      // 2. Tabla de Proyectos / Paletas guardadas
+      // 2. Saved palette projects table
       $sqlProjects = "CREATE TABLE IF NOT EXISTS projects (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -58,7 +58,7 @@ class SQLiteSetup
       $pdo->exec($sqlProjects);
       $results["projects"] = "OK";
 
-      // 3. Tabla de Registro de Visitas
+      // 3. Platform visits audit table
       $sqlVisits = "CREATE TABLE IF NOT EXISTS visits (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         ip TEXT DEFAULT NULL,
@@ -71,7 +71,7 @@ class SQLiteSetup
       $pdo->exec($sqlVisits);
       $results["visits"] = "OK";
 
-      // 4. Tabla de Registro de Logs del sistema
+      // 4. System event logs table
       $sqlLogs = "CREATE TABLE IF NOT EXISTS logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         level TEXT NOT NULL DEFAULT 'info',

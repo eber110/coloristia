@@ -1,13 +1,13 @@
 <?php
 /**
- * Tablero de combinaciones cromáticas y guardado de proyectos.
+ * Chromatic harmony dashboard and project save panel.
  *
  * @var bool $isLoggedIn
  */
 ?>
 <section class="harmonies-section">
   <div class="harmonies-header">
-    <!-- Título y selector de vista -->
+    <!-- Section title and harmony filter dropdown -->
     <div class="harmonies-title-group flex-wrap">
       <h2 class="harmonies-title">
         Combinaciones (Base: <span id="baseColorLabel" class="font-mono" style="color: var(--color-primary-brand);">#C42127</span>)
@@ -22,7 +22,7 @@
       </div>
     </div>
 
-    <!-- Barra de Guardar Proyecto -->
+    <!-- Save Project Bar -->
     <div class="save-project-bar flex-wrap">
       <input
         type="text"
@@ -38,8 +38,8 @@
     </div>
   </div>
 
-  <!-- Rejilla interactiva de columnas cromáticas -->
+  <!-- Dynamic chromatic harmony columns grid -->
   <div id="harmoniesGrid" class="harmonies-grid">
-    <!-- Renderizado dinámico vía coloristiaApp.js -->
+    <!-- Rendered via coloristiaApp.js -->
   </div>
 </section>

@@ -11,12 +11,12 @@ use App\Models\UserModels;
 use App\Models\LogModels;
 
 /**
- * Controlador de autenticación y gestión de preferencias de usuario.
+ * Controller for user authentication, registration, and color system preferences.
  */
 class AuthControllers extends Control
 {
   /**
-   * Procesa el inicio de sesión del usuario.
+   * Processes user login.
    *
    * @return never
    */
@@ -45,7 +45,7 @@ class AuthControllers extends Control
     $attempt = AuthModule::attempt($identifier, $password, "users", $column, "password");
 
     if (!$attempt) {
-      LogModels::record("warning", "auth.failed", "Intento de inicio de sesión fallido para: {$identifier}");
+      LogModels::record("warning", "auth.failed", "Failed login attempt for identifier: {$identifier}");
       ResponseModule::json([
         "status"  => "error",
         "message" => "Credenciales incorrectas. Verifica tus datos."
@@ -61,7 +61,7 @@ class AuthControllers extends Control
       $_SESSION["user"]["color_system"] = $colorSystem;
     }
 
-    LogModels::record("info", "auth.login", "Usuario inició sesión: {$user['username']}", null, $userId);
+    LogModels::record("info", "auth.login", "User successfully authenticated: {$user['username']}", null, $userId);
 
     ResponseModule::json([
       "status"       => "success",
@@ -77,7 +77,7 @@ class AuthControllers extends Control
   }
 
   /**
-   * Registra un nuevo usuario en la plataforma.
+   * Registers a new user account.
    *
    * @return never
    */
@@ -147,17 +147,17 @@ class AuthControllers extends Control
     ]);
 
     if (!$userId) {
-      LogModels::record("error", "auth.register_error", "Error al registrar usuario: {$username}");
+      LogModels::record("error", "auth.register_error", "Failed to register user: {$username}");
       ResponseModule::json([
         "status"  => "error",
         "message" => "No se pudo completar el registro. Intenta nuevamente."
       ], 500);
     }
 
-    // Iniciar sesión automáticamente
+    // Automatically log in the registered user
     AuthModule::loginUsingId($userId);
 
-    LogModels::record("info", "auth.register", "Nuevo usuario registrado: {$username}", null, (int)$userId);
+    LogModels::record("info", "auth.register", "New user registered: {$username}", null, (int)$userId);
 
     ResponseModule::json([
       "status"       => "success",
@@ -173,7 +173,7 @@ class AuthControllers extends Control
   }
 
   /**
-   * Cierra la sesión activa del usuario.
+   * Terminates active session.
    *
    * @return never
    */
@@ -183,7 +183,7 @@ class AuthControllers extends Control
 
     if (AuthModule::check()) {
       $userId = AuthModule::id();
-      LogModels::record("info", "auth.logout", "Cierre de sesión", null, $userId);
+      LogModels::record("info", "auth.logout", "User logged out", null, $userId);
       AuthModule::logout();
     }
 
@@ -201,7 +201,7 @@ class AuthControllers extends Control
   }
 
   /**
-   * Actualiza el sistema de color de preferencia del usuario autenticado.
+   * Updates preferred color system for authenticated user.
    *
    * @return never
    */

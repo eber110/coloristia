@@ -1,23 +1,23 @@
 /**
  * @file colorEngine.js
- * @description Motor cromático profesional de Coloristia.
- * Implementa normalización angular, generación de 12 armonías, escalado armónico de 6 a 16 colores,
- * curva parabólica de saturación, efecto Bezold-Brücke, compensación perceptual,
- * conversiones entre espacios de color (HEX, RGB, HSL, HSV, CMYK) y contraste relativo WCAG.
+ * @description Professional chromatic engine for Coloristia.
+ * Implements angular normalization, 12 harmony rules, 6-to-16 variation harmonic scaling,
+ * parabolic saturation curves, Bezold-Brücke hue micro-rotation, perceptual brightness compensation,
+ * conversions across color spaces (HEX, RGB, HSL, HSV, CMYK), and WCAG relative luminance contrast.
  */
 
 /**
- * Normaliza un ángulo para mantenerse siempre en el intervalo [0, 360).
+ * Normalizes an angle into the circular interval [0, 360).
  *
- * @param {number} theta Ángulo en grados.
- * @returns {number} Ángulo normalizado en [0, 360).
+ * @param {number} theta Angle in degrees.
+ * @returns {number} Normalized angle in [0, 360).
  */
 export function normHue(theta) {
   return ((theta % 360) + 360) % 360;
 }
 
 /**
- * Definición de matrices de anclas angulares para todas las reglas de armonía.
+ * Anchor shift angle definitions for all supported harmony rules.
  */
 export const HARMONY_RULES = {
   monochromatic: {
@@ -108,11 +108,11 @@ export const HARMONY_RULES = {
 };
 
 /**
- * Convierte valores HSL a RGB en rango [0, 255].
+ * Converts HSL values to RGB values in the [0, 255] range.
  *
- * @param {number} H Matiz [0, 360)
- * @param {number} S Saturación [0, 100]
- * @param {number} L Luminosidad [0, 100]
+ * @param {number} H Hue [0, 360)
+ * @param {number} S Saturation [0, 100]
+ * @param {number} L Lightness [0, 100]
  * @returns {{r: number, g: number, b: number}}
  */
 export function hslToRgb(H, S, L) {
@@ -150,11 +150,11 @@ export function hslToRgb(H, S, L) {
 }
 
 /**
- * Convierte RGB [0, 255] a HSL.
+ * Converts RGB [0, 255] to HSL.
  *
- * @param {number} r Canal rojo [0, 255]
- * @param {number} g Canal verde [0, 255]
- * @param {number} b Canal azul [0, 255]
+ * @param {number} r Red channel [0, 255]
+ * @param {number} g Green channel [0, 255]
+ * @param {number} b Blue channel [0, 255]
  * @returns {{h: number, s: number, l: number}}
  */
 export function rgbToHsl(r, g, b) {
@@ -190,12 +190,12 @@ export function rgbToHsl(r, g, b) {
 }
 
 /**
- * Convierte valores RGB [0, 255] a cadena HEX (#RRGGBB).
+ * Converts RGB values [0, 255] to uppercase HEX string (#RRGGBB).
  *
  * @param {number} r
  * @param {number} g
  * @param {number} b
- * @returns {string} Código HEX en mayúsculas (ej: #C42127).
+ * @returns {string} Uppercase HEX color code.
  */
 export function rgbToHex(r, g, b) {
   const toHex = (c) => {
@@ -206,9 +206,9 @@ export function rgbToHex(r, g, b) {
 }
 
 /**
- * Convierte un código HEX (#RGB o #RRGGBB) a valores RGB.
+ * Parses a HEX string (#RGB or #RRGGBB) to RGB values.
  *
- * @param {string} hex Cadena hexadecimal.
+ * @param {string} hex Hexadecimal string.
  * @returns {{r: number, g: number, b: number}}
  */
 export function hexToRgb(hex) {
@@ -217,7 +217,7 @@ export function hexToRgb(hex) {
     clean = clean.split("").map((c) => c + c).join("");
   }
   if (clean.length !== 6) {
-    return { r: 196, g: 33, b: 39 }; // Fallback rojo por defecto
+    return { r: 196, g: 33, b: 39 };
   }
 
   const num = parseInt(clean, 16);
@@ -233,7 +233,7 @@ export function hexToRgb(hex) {
 }
 
 /**
- * Convierte HSL a HSV / HSB.
+ * Converts HSL to HSV / HSB.
  *
  * @param {number} H
  * @param {number} S
@@ -254,7 +254,7 @@ export function hslToHsv(H, S, L) {
 }
 
 /**
- * Convierte RGB a CMYK en porcentajes [0, 100].
+ * Converts RGB to CMYK percentages [0, 100].
  *
  * @param {number} r
  * @param {number} g
@@ -284,12 +284,12 @@ export function rgbToCmyk(r, g, b) {
 }
 
 /**
- * Calcula la luminancia relativa WCAG de un color RGB.
+ * Computes WCAG relative luminance from RGB channels.
  *
- * @param {number} r Canal rojo [0, 255]
- * @param {number} g Canal verde [0, 255]
- * @param {number} b Canal azul [0, 255]
- * @returns {number} Luminancia relativa Y [0, 1]
+ * @param {number} r Red channel [0, 255]
+ * @param {number} g Green channel [0, 255]
+ * @param {number} b Blue channel [0, 255]
+ * @returns {number} Relative luminance Y [0, 1]
  */
 export function getRelativeLuminance(r, g, b) {
   const linearize = (c) => {
@@ -305,12 +305,12 @@ export function getRelativeLuminance(r, g, b) {
 }
 
 /**
- * Determina el color óptimo de texto para garantizar contraste accesible WCAG.
+ * Determines optimal text color to ensure WCAG compliant contrast.
  *
  * @param {number} r
  * @param {number} g
  * @param {number} b
- * @returns {string} "#18181B" si el fondo es claro, o "#FFFFFF" si el fondo es oscuro.
+ * @returns {string} "#18181B" for light background, or "#FFFFFF" for dark background.
  */
 export function getAccessibleTextColor(r, g, b) {
   const Y = getRelativeLuminance(r, g, b);
@@ -318,11 +318,11 @@ export function getAccessibleTextColor(r, g, b) {
 }
 
 /**
- * Formatea un color según el sistema de color seleccionado.
+ * Formats a color object according to the selected color system.
  *
- * @param {Object} color Objeto de color con componentes h, s, l, r, g, b
+ * @param {Object} color Color object with h, s, l, r, g, b, hex fields.
  * @param {string} system 'hex' | 'rgb' | 'hsl' | 'hsv' | 'cmyk'
- * @returns {string} Cadena formateada para la UI
+ * @returns {string} Formatted string for UI representation.
  */
 export function formatColorValue(color, system = "hex") {
   const sys = (system || "hex").toLowerCase();
@@ -346,15 +346,15 @@ export function formatColorValue(color, system = "hex") {
 }
 
 /**
- * Genera una paleta de N colores siguiendo la regla de armonía y el plan de escalado dinámico.
+ * Generates an N-color palette following harmonic geometry and dynamic scaling rules.
  *
- * @param {number} H0 Matiz semilla [0, 360)
- * @param {number} S0 Saturación semilla [0, 100]
- * @param {number} L0 Luminosidad semilla [0, 100]
- * @param {string} harmonyKey Clave de la regla de armonía (ej: 'monochromatic', 'complementary')
- * @param {number} N Cantidad de variaciones (entre 6 y 16)
- * @param {string} sortMode 'family' (agrupado por ancla en gradiente) o 'luminance' (gradiente global)
- * @returns {Array<Object>} Lista de objetos de color generados
+ * @param {number} H0 Seed hue [0, 360)
+ * @param {number} S0 Seed saturation [0, 100]
+ * @param {number} L0 Seed lightness [0, 100]
+ * @param {string} harmonyKey Harmony identifier (e.g., 'monochromatic', 'complementary')
+ * @param {number} N Total variations count (clamped between 6 and 16)
+ * @param {string} sortMode 'family' (anchor grouped gradient) or 'luminance' (global gradient)
+ * @returns {Array<Object>} Generated color palette objects.
  */
 export function generatePalette(H0, S0, L0, harmonyKey = "monochromatic", N = 6, sortMode = "family") {
   const clampedN = Math.max(6, Math.min(16, Math.round(N)));
@@ -364,8 +364,7 @@ export function generatePalette(H0, S0, L0, harmonyKey = "monochromatic", N = 6,
   let K = 1;
 
   if (harmony.dynamic) {
-    // Proporción Áurea: delta H_i = i * 137.508°
-    // Distribuimos equitativamente entre hasta 5 o 6 anclas dinámicas o N directo
+    // Golden ratio sequence: delta H_i = i * 137.508°
     K = Math.min(clampedN, 5);
     shifts = [];
     for (let i = 0; i < K; i++) {
@@ -376,7 +375,7 @@ export function generatePalette(H0, S0, L0, harmonyKey = "monochromatic", N = 6,
     K = harmony.k;
   }
 
-  // Paso 1: Distribución de cupos por ancla
+  // Step 1: Distribution of slots per anchor
   let effectiveK = K;
   let activeShifts = shifts;
 
@@ -393,7 +392,7 @@ export function generatePalette(H0, S0, L0, harmonyKey = "monochromatic", N = 6,
     anchorCounts.push(j < Rmod ? Q + 1 : Q);
   }
 
-  // Paso 2: Cálculo de L, S y micro-rotación Bezold-Brücke por ancla
+  // Step 2: Calculate L, S, and Bezold-Brücke micro-rotation per anchor
   const colors = [];
 
   for (let j = 0; j < effectiveK; j++) {
@@ -411,21 +410,21 @@ export function generatePalette(H0, S0, L0, harmonyKey = "monochromatic", N = 6,
         Ljm = Lmin + (m * deltaL);
       }
 
-      // Curva Parabólica de Saturación
+      // Parabolic saturation curve
       const Dcentro = Math.abs(Ljm - 50) / 50;
       const Sjm = Math.max(15, S0 * (1 - 0.45 * Math.pow(Dcentro, 2)));
 
-      // Efecto Bezold-Brücke (Micro-rotación natural de matiz ±6°)
+      // Bezold-Brücke effect: natural hue rotation (±6°)
       const microShift = ((Ljm - 50) / 50) * 6;
       let Hjm = normHue(H0 + deltaH + microShift);
 
-      // Compensación de brillo perceptual para anclas unitarias en amarillos/limas/cianes
+      // Perceptual brightness compensation for single-anchor yellows/limes/cyans
       if (Mj === 1 && Hjm >= 45 && Hjm <= 160) {
         const factor = Math.max(0, Math.sin(((Hjm - 45) / 115) * Math.PI));
         Ljm = Math.max(10, Ljm - 8 * factor);
       }
 
-      // Convertir a RGB y formatos
+      // Convert to RGB and other formats
       const rgb = hslToRgb(Hjm, Sjm, Ljm);
       const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
       const Y = getRelativeLuminance(rgb.r, rgb.g, rgb.b);
@@ -447,26 +446,24 @@ export function generatePalette(H0, S0, L0, harmonyKey = "monochromatic", N = 6,
     }
   }
 
-  // Ordenamiento final
+  // Final sorting
   if (sortMode === "luminance") {
-    // Vista de gradiente global: ordenar de mayor a menor luminancia relativa (o viceversa)
+    // Global gradient view: sort by relative luminance Y descending
     colors.sort((a, b) => b.luminance - a.luminance);
   } else {
-    // Vista agrupada por familias de ancla:
-    // Ya vienen agrupados por ancla j (0 a K-1) y ordenados por Ljm (Lmin -> Lmax)
-    // para crear un gradiente fluido idéntico a las capturas.
+    // Grouped by anchor families in smooth gradient order (Lmin -> Lmax)
   }
 
   return colors;
 }
 
 /**
- * Genera el mapa completo de armonías disponibles para un color semilla.
+ * Generates all harmony palettes for a given seed color.
  *
- * @param {string} seedHex Color semilla en HEX (ej: #C42127)
- * @param {number} variations Cantidad de variaciones (6 a 16)
- * @param {string} sortMode Modo de ordenamiento ('family' o 'luminance')
- * @returns {Object} Mapa de armonías con clave -> lista de colores
+ * @param {string} seedHex Seed color in HEX (e.g., #C42127)
+ * @param {number} variations Variation count (6 to 16)
+ * @param {string} sortMode Sort mode ('family' or 'luminance')
+ * @returns {Object} Complete map of harmonies with rule metadata and color arrays.
  */
 export function generateAllHarmonies(seedHex, variations = 6, sortMode = "family") {
   const rgb = hexToRgb(seedHex);

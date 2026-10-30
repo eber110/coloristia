@@ -5,21 +5,21 @@ namespace App\Models;
 use Base\Builder\Builder;
 
 /**
- * Modelo para el registro de eventos y logs en base de datos.
+ * Model for logging system events into the database.
  */
 class LogModels extends Builder
 {
   protected $table = "logs";
 
   /**
-   * Registra un log en la base de datos.
+   * Records an event log in the database.
    *
-   * @param string $level Nivel de severidad (info, warning, error, critical).
-   * @param string $action Acción ejecutada (ej: auth.login, project.create).
-   * @param string $message Mensaje explicativo.
-   * @param string|null $context Datos adicionales serializados en JSON.
-   * @param int|null $userId ID del usuario involucrado, si aplica.
-   * @return int|string|false ID del log insertado o false en fallo.
+   * @param string $level Severity level (info, warning, error, critical).
+   * @param string $action Action key (e.g., auth.login, project.create).
+   * @param string $message Explanatory message.
+   * @param string|null $context Additional context data in JSON format.
+   * @param int|null $userId Involved user ID if available.
+   * @return int|string|false Inserted log ID or false on failure.
    */
   public static function record(
     string $level,
@@ -42,9 +42,9 @@ class LogModels extends Builder
   }
 
   /**
-   * Obtiene los logs más recientes.
+   * Retrieves recent logs.
    *
-   * @param int $limit Límite de registros a recuperar.
+   * @param int $limit Maximum records to fetch.
    * @return array
    */
   public static function getRecent(int $limit = 50): array

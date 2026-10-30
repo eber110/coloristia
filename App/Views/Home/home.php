@@ -1,5 +1,7 @@
 <?php
 /**
+ * Main orchestrator view for Coloristia.
+ *
  * @var array|null $user
  * @var array $projects
  * @var bool $isLoggedIn
@@ -30,5 +32,5 @@
   ?>
 </div>
 
-<!-- Input nativo de color para selección directa -->
+<!-- Hidden native color input for direct system picker -->
 <input type="color" id="nativeColorPicker" value="#C42127" style="display: none;" aria-hidden="true">

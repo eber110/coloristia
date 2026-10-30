@@ -1,8 +1,8 @@
 /**
  * @file coloristiaApp.js
- * @description Orquestador interactivo de Coloristia en el frontend.
- * Conecta el motor cromático con la interfaz de usuario, selector de color,
- * stepper de 6 a 16 variaciones, guardado de proyectos en SQLite y modales de autenticación.
+ * @description Frontend orchestrator for Coloristia.
+ * Connects the color engine with the user interface, color picker,
+ * 6-to-16 variation stepper, SQLite project persistence, and authentication modals.
  */
 
 import {
@@ -14,7 +14,7 @@ import {
 } from "./colorEngine.js";
 
 /**
- * Estado reactivo global de la aplicación.
+ * Global reactive application state.
  */
 const state = {
   currentColor: "#C42127",
@@ -26,9 +26,9 @@ const state = {
 };
 
 /**
- * Muestra una notificación Toast temporal no intrusiva.
+ * Displays a non-intrusive toast notification.
  *
- * @param {string} message Mensaje a mostrar.
+ * @param {string} message Message text to display.
  * @param {string} type 'success' | 'error' | 'info'
  */
 export function showToast(message, type = "success") {
@@ -52,7 +52,7 @@ export function showToast(message, type = "success") {
 }
 
 /**
- * Obtiene el token CSRF configurado en la cabecera meta.
+ * Retrieves the CSRF token from the meta tag in the HTML head.
  *
  * @returns {string}
  */
@@ -62,9 +62,9 @@ export function getCsrfToken() {
 }
 
 /**
- * Copia un texto al portapapeles y notifica al usuario.
+ * Copies text to the clipboard and provides user feedback.
  *
- * @param {string} text Texto a copiar.
+ * @param {string} text Text to copy.
  */
 export async function copyToClipboard(text) {
   try {
@@ -87,12 +87,12 @@ export async function copyToClipboard(text) {
 }
 
 /**
- * Renderiza el tablero de armonías cromáticas.
+ * Renders chromatic harmonies grid and hero preview.
  */
 export function renderHarmonies() {
   const data = generateAllHarmonies(state.currentColor, state.variations, "family");
 
-  // Actualizar previsualización central semilla
+  // Update central seed swatch preview and labels
   const heroSwatch = document.getElementById("heroColorSwatch");
   const heroLabel = document.getElementById("heroColorLabel");
   const baseColorLabel = document.getElementById("baseColorLabel");
@@ -117,7 +117,7 @@ export function renderHarmonies() {
     projectNameInput.dataset.auto = "true";
   }
 
-  // Las 5 columnas primarias visibles por defecto según la imagen
+  // 5 primary harmony columns visible by default as seen in image 1
   const primaryKeys = [
     "monochromatic",
     "complementary",
@@ -126,7 +126,7 @@ export function renderHarmonies() {
     "splitComplementary"
   ];
 
-  // Armonías adicionales
+  // Extended and auxiliary harmonies
   const extraKeys = [
     "analogousExtended",
     "analogousAccented",
@@ -188,9 +188,9 @@ export function renderHarmonies() {
 }
 
 /**
- * Actualiza el color semilla actual y re-renderiza.
+ * Updates current seed color and triggers re-render.
  *
- * @param {string} hex Código HEX
+ * @param {string} hex HEX color code.
  */
 export function setSeedColor(hex) {
   let clean = hex.trim();
@@ -211,9 +211,9 @@ export function setSeedColor(hex) {
 }
 
 /**
- * Modifica la cantidad de variaciones (6 a 16).
+ * Modifies variation count between 6 and 16.
  *
- * @param {number} delta Cambio (+1 o -1)
+ * @param {number} delta Step change (+1 or -1).
  */
 export function changeVariations(delta) {
   const current = state.variations;
@@ -229,7 +229,7 @@ export function changeVariations(delta) {
 }
 
 /**
- * Genera un color aleatorio con buena saturación para comenzar.
+ * Generates a vibrant random seed color.
  */
 export function generateRandomColor() {
   const h = Math.floor(Math.random() * 360);
@@ -241,7 +241,7 @@ export function generateRandomColor() {
 }
 
 /**
- * Cambia el sistema de color seleccionado y actualiza tarjetas.
+ * Changes active color system and updates palette cards in-place.
  *
  * @param {string} system 'hex' | 'rgb' | 'hsl' | 'hsv' | 'cmyk'
  */
@@ -249,14 +249,14 @@ export async function changeColorSystem(system) {
   state.colorSystem = system.toLowerCase();
   renderHarmonies();
 
-  // Si está autenticado, persistir preferencia en SQLite
+  // If user is authenticated, persist preferred color system in SQLite
   if (state.isLoggedIn) {
     try {
       const formData = new FormData();
       formData.append("color_system", state.colorSystem);
       formData.append("_token", getCsrfToken());
 
-      await fetch("/user/color-system", {
+      await fetch("/usuario/sistema-color", {
         method: "POST",
         headers: {
           "X-Requested-With": "XMLHttpRequest",
@@ -265,13 +265,13 @@ export async function changeColorSystem(system) {
         body: formData
       });
     } catch (e) {
-      console.warn("No se pudo guardar la preferencia de color:", e);
+      console.warn("Unable to persist color system preference:", e);
     }
   }
 }
 
 /**
- * Guarda el proyecto cromático en la base de datos SQLite.
+ * Saves current palette project into the SQLite database.
  */
 export async function saveCurrentProject() {
   if (!state.isLoggedIn) {
@@ -290,7 +290,7 @@ export async function saveCurrentProject() {
     formData.append("hex_color", state.currentColor);
     formData.append("_token", getCsrfToken());
 
-    const response = await fetch("/projects/save", {
+    const response = await fetch("/proyectos/guardar", {
       method: "POST",
       headers: {
         "X-Requested-With": "XMLHttpRequest",
@@ -315,7 +315,7 @@ export async function saveCurrentProject() {
 }
 
 /**
- * Elimina un proyecto guardado de SQLite.
+ * Deletes a saved project from the database.
  *
  * @param {number} projectId
  */
@@ -327,7 +327,7 @@ export async function deleteProject(projectId) {
     formData.append("id", projectId);
     formData.append("_token", getCsrfToken());
 
-    const response = await fetch("/projects/delete", {
+    const response = await fetch("/proyectos/eliminar", {
       method: "POST",
       headers: {
         "X-Requested-With": "XMLHttpRequest",
@@ -350,7 +350,7 @@ export async function deleteProject(projectId) {
 }
 
 /**
- * Renderiza la lista de proyectos guardados dentro del modal de proyectos.
+ * Renders the saved projects list inside the drawer modal.
  */
 export function renderProjectsList() {
   const container = document.getElementById("projectsListContainer");
@@ -401,7 +401,7 @@ export function renderProjectsList() {
 }
 
 /**
- * Abre un modal por su ID.
+ * Opens a modal dialog by its element ID.
  *
  * @param {string} modalId
  */
@@ -414,7 +414,7 @@ export function openModal(modalId) {
 }
 
 /**
- * Cierra un modal por su ID.
+ * Closes an active modal dialog by its element ID.
  *
  * @param {string} modalId
  */
@@ -429,17 +429,17 @@ export function closeModal(modalId) {
 }
 
 /**
- * Inicialización principal de Coloristia al cargar el DOM.
+ * Main application bootstrap function.
  */
 export function initColoristia() {
-  // Cargar estado inicial inyectado desde PHP
+  // Load initial state injected from PHP backend
   if (window.COLORISTIA_DATA) {
     state.isLoggedIn = !!window.COLORISTIA_DATA.isLoggedIn;
     state.colorSystem = window.COLORISTIA_DATA.colorSystem || "hex";
     state.projects = window.COLORISTIA_DATA.projects || [];
   }
 
-  // Inicializar selector de sistema de color
+  // Color system dropdown event listener
   const systemSelect = document.getElementById("colorSystemSelect");
   if (systemSelect) {
     systemSelect.value = state.colorSystem;
@@ -448,7 +448,7 @@ export function initColoristia() {
     });
   }
 
-  // Stepper de variaciones
+  // Variation count stepper event listeners
   const decBtn = document.getElementById("decreaseVariationsBtn");
   const incBtn = document.getElementById("increaseVariationsBtn");
   if (decBtn) {
@@ -458,7 +458,7 @@ export function initColoristia() {
     incBtn.addEventListener("click", () => changeVariations(1));
   }
 
-  // Input de color nativo
+  // Color pickers and swatches
   const nativePicker = document.getElementById("nativeColorPicker");
   const quickTrigger = document.getElementById("quickColorTrigger");
   const heroSwatch = document.getElementById("heroColorSwatch");
@@ -483,19 +483,19 @@ export function initColoristia() {
     });
   }
 
-  // Botón aleatorio
+  // Random color button
   const randomBtn = document.getElementById("randomColorBtn");
   if (randomBtn) {
     randomBtn.addEventListener("click", () => generateRandomColor());
   }
 
-  // Guardar proyecto
+  // Save project button
   const saveBtn = document.getElementById("saveProjectBtn");
   if (saveBtn) {
     saveBtn.addEventListener("click", () => saveCurrentProject());
   }
 
-  // Filtro de armonías (pestañas o botones)
+  // Harmonies filter dropdown
   const filterHarmoniesSelect = document.getElementById("harmoniesFilterSelect");
   if (filterHarmoniesSelect) {
     filterHarmoniesSelect.addEventListener("change", (e) => {
@@ -504,7 +504,7 @@ export function initColoristia() {
     });
   }
 
-  // Botón Mis Paletas
+  // Saved projects modal trigger
   const openProjectsBtn = document.getElementById("openProjectsModalBtn");
   if (openProjectsBtn) {
     openProjectsBtn.addEventListener("click", () => {
@@ -513,7 +513,7 @@ export function initColoristia() {
     });
   }
 
-  // Botones de login y registro en el nav
+  // Authentication modal buttons
   const openLoginBtn = document.getElementById("openLoginModalBtn");
   const openRegisterBtn = document.getElementById("openRegisterModalBtn");
   if (openLoginBtn) {
@@ -523,7 +523,7 @@ export function initColoristia() {
     openRegisterBtn.addEventListener("click", () => openModal("registerModal"));
   }
 
-  // Botones para alternar entre modales de login y registro
+  // Switch between login and registration modals
   const switchRegisterBtn = document.getElementById("switchToRegisterBtn");
   const switchLoginBtn = document.getElementById("switchToLoginBtn");
   if (switchRegisterBtn) {
@@ -539,7 +539,7 @@ export function initColoristia() {
     });
   }
 
-  // Cerrar modales al hacer clic en overlays o botones de cierre
+  // Modal close triggers
   document.querySelectorAll("[data-close-modal]").forEach((el) => {
     el.addEventListener("click", () => {
       const target = el.getAttribute("data-close-modal");
@@ -547,7 +547,7 @@ export function initColoristia() {
     });
   });
 
-  // Manejo de formulario de Login por AJAX
+  // AJAX Login form handler
   const loginForm = document.getElementById("loginForm");
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
@@ -556,7 +556,7 @@ export function initColoristia() {
       formData.append("_token", getCsrfToken());
 
       try {
-        const response = await fetch("/auth/login", {
+        const response = await fetch("/autenticacion/ingresar", {
           method: "POST",
           headers: {
             "X-Requested-With": "XMLHttpRequest",
@@ -578,7 +578,7 @@ export function initColoristia() {
     });
   }
 
-  // Manejo de formulario de Registro por AJAX
+  // AJAX Register form handler
   const registerForm = document.getElementById("registerForm");
   if (registerForm) {
     registerForm.addEventListener("submit", async (e) => {
@@ -587,7 +587,7 @@ export function initColoristia() {
       formData.append("_token", getCsrfToken());
 
       try {
-        const response = await fetch("/auth/register", {
+        const response = await fetch("/autenticacion/registro", {
           method: "POST",
           headers: {
             "X-Requested-With": "XMLHttpRequest",
@@ -609,11 +609,11 @@ export function initColoristia() {
     });
   }
 
-  // Render inicial
+  // Initial harmony rendering
   renderHarmonies();
 }
 
-// Auto-inicializar si el documento ya cargó o escuchar DOMContentLoaded
+// Auto-bootstrap on DOM ready
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initColoristia);
 } else {

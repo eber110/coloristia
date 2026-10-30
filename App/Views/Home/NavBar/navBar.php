@@ -1,6 +1,6 @@
 <?php
 /**
- * Barra superior de navegación de Coloristia.
+ * Top navigation bar component for Coloristia.
  *
  * @var array|null $user
  * @var bool $isLoggedIn
@@ -14,7 +14,7 @@
   <div class="nav-actions flex-row items-center gap12">
     <?php if ($isLoggedIn && !empty($user)): ?>
       <span class="text-sm text-muted font-medium">Hola, <strong class="text-white"><?= e($user['username'] ?? 'Usuario') ?></strong></span>
-      <form action="/auth/logout" method="POST" style="margin: 0; display: inline;">
+      <form action="/autenticacion/salir" method="POST" style="margin: 0; display: inline;">
         <?= \Base\Module\SecurityModule::csrfField() ?>
         <button type="submit" class="btn btn-outline btn-sm">Salir</button>
       </form>

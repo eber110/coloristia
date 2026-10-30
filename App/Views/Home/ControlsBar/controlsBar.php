@@ -1,6 +1,6 @@
 <?php
 /**
- * Barra de control y configuración de paletas (sistema de color, variaciones, stepper).
+ * Palette control and configuration bar (color system, variation stepper, quick swatches).
  *
  * @var string $colorSystem
  * @var bool $isLoggedIn
@@ -8,7 +8,7 @@
 ?>
 <section class="controls-panel">
   <div class="controls-header">
-    <!-- Título y Selector de Sistema de Color -->
+    <!-- Brand title and Color System selector -->
     <div class="flex-row items-center gap20 flex-wrap">
       <span class="brand-title">Coloristia</span>
 
@@ -23,7 +23,7 @@
         </select>
       </div>
 
-      <!-- Stepper de Variaciones (6 a 16) -->
+      <!-- Variations Stepper (6 to 16) -->
       <div class="control-group">
         <label class="control-label">Variaciones (6-16):</label>
         <div class="stepper-box">
@@ -33,7 +33,7 @@
         </div>
       </div>
 
-      <!-- Acciones de Color Rápido -->
+      <!-- Quick Color Actions -->
       <div class="control-group">
         <button type="button" id="quickColorTrigger" class="color-circle-btn" title="Seleccionar color base" style="background-color: #C42127;">
           <span id="quickColorCircle"></span>
@@ -49,7 +49,7 @@
       </div>
     </div>
 
-    <!-- Botón Mis Paletas -->
+    <!-- My Palettes Button -->
     <div>
       <button type="button" id="openProjectsModalBtn" class="btn btn-outline" style="border-radius: 8px; font-weight: 600; padding: 8px 16px;">
         Mis Paletas

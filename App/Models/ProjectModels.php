@@ -5,19 +5,19 @@ namespace App\Models;
 use Base\Builder\Builder;
 
 /**
- * Modelo para la gestión de proyectos y colores base de los usuarios.
+ * Model for user color projects and base seed colors.
  */
 class ProjectModels extends Builder
 {
   protected $table = "projects";
 
   /**
-   * Guarda un nuevo proyecto con su color base en formato HEX.
+   * Saves a new project record with its base HEX color.
    *
-   * @param int|string $userId Identificador del usuario.
-   * @param string $projectName Nombre del proyecto.
-   * @param string $hexColor Color base en formato HEX (ej: #c42127).
-   * @return int|string|false ID del proyecto creado o false si falló.
+   * @param int|string $userId User identifier.
+   * @param string $projectName Project name.
+   * @param string $hexColor Base color in HEX format (e.g., #C42127).
+   * @return int|string|false Created project ID or false on failure.
    */
   public static function saveProject(int|string $userId, string $projectName, string $hexColor): int|string|false
   {
@@ -40,10 +40,10 @@ class ProjectModels extends Builder
   }
 
   /**
-   * Obtiene todos los proyectos pertenecientes a un usuario.
+   * Retrieves all projects for a specific user.
    *
-   * @param int|string $userId Identificador del usuario.
-   * @return array Lista de proyectos ordenados del más reciente al más antiguo.
+   * @param int|string $userId User identifier.
+   * @return array List of projects sorted by ID descending.
    */
   public static function getByUserId(int|string $userId): array
   {
@@ -57,11 +57,11 @@ class ProjectModels extends Builder
   }
 
   /**
-   * Obtiene un proyecto por su ID validando la pertenencia al usuario.
+   * Retrieves a single project by ID verifying user ownership.
    *
-   * @param int|string $id ID del proyecto.
-   * @param int|string $userId ID del usuario.
-   * @return array|null Datos del proyecto o null si no existe.
+   * @param int|string $id Project ID.
+   * @param int|string $userId User ID.
+   * @return array|null Project record or null if not found.
    */
   public static function getById(int|string $id, int|string $userId): ?array
   {
@@ -78,13 +78,13 @@ class ProjectModels extends Builder
   }
 
   /**
-   * Actualiza el nombre o color de un proyecto existente.
+   * Updates an existing project's name or base color.
    *
-   * @param int|string $id ID del proyecto.
-   * @param int|string $userId ID del usuario.
-   * @param string $projectName Nombre del proyecto.
-   * @param string $hexColor Color en HEX.
-   * @return bool True si se actualizó con éxito.
+   * @param int|string $id Project ID.
+   * @param int|string $userId User ID.
+   * @param string $projectName Project name.
+   * @param string $hexColor Base HEX color.
+   * @return bool True on success.
    */
   public static function updateProject(int|string $id, int|string $userId, string $projectName, string $hexColor): bool
   {
@@ -109,11 +109,11 @@ class ProjectModels extends Builder
   }
 
   /**
-   * Elimina un proyecto si pertenece al usuario.
+   * Deletes a project owned by the user.
    *
-   * @param int|string $id ID del proyecto.
-   * @param int|string $userId ID del usuario propietario.
-   * @return bool True si fue eliminado.
+   * @param int|string $id Project ID.
+   * @param int|string $userId User ID.
+   * @return bool True if deleted successfully.
    */
   public static function deleteProject(int|string $id, int|string $userId): bool
   {

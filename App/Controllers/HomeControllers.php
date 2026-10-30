@@ -10,12 +10,12 @@ use App\Models\ProjectModels;
 use App\Models\UserModels;
 
 /**
- * Controlador principal para la vista de Coloristia.
+ * Main application controller for Coloristia.
  */
 class HomeControllers extends Control
 {
   /**
-   * Renderiza la página principal de la aplicación.
+   * Renders the home view with user data and saved projects.
    *
    * @return void
    */

@@ -5,21 +5,21 @@ namespace App\Models;
 use Base\Builder\Builder;
 
 /**
- * Modelo para el registro y auditoría de visitas a la aplicación.
+ * Model for recording and auditing platform visits.
  */
 class VisitModels extends Builder
 {
   protected $table = "visits";
 
   /**
-   * Registra una visita en la base de datos.
+   * Records a user visit in the database.
    *
-   * @param string|null $ip Dirección IP del visitante.
-   * @param string|null $userAgent Navegador o cliente HTTP.
-   * @param string|null $page Ruta o recurso solicitado.
-   * @param string|null $country País resuelto por GeoIP.
-   * @param string|null $city Ciudad resuelta por GeoIP.
-   * @return int|string|false ID de la visita o false en fallo.
+   * @param string|null $ip Visitor IP address.
+   * @param string|null $userAgent Visitor HTTP client/agent string.
+   * @param string|null $page Requested URL path.
+   * @param string|null $country Country resolved via GeoIP.
+   * @param string|null $city City resolved via GeoIP.
+   * @return int|string|false Inserted visit ID or false on failure.
    */
   public static function recordVisit(
     ?string $ip = null,
@@ -42,9 +42,9 @@ class VisitModels extends Builder
   }
 
   /**
-   * Obtiene las visitas más recientes.
+   * Retrieves recent visits.
    *
-   * @param int $limit Límite de registros.
+   * @param int $limit Maximum number of records.
    * @return array
    */
   public static function getRecent(int $limit = 50): array

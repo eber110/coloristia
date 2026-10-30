@@ -7,12 +7,12 @@ use App\Models\VisitModels;
 use Base\Module\GeoLocation;
 
 /**
- * Middleware para auditar y registrar las visitas a la plataforma.
+ * Middleware for tracking and auditing platform visits.
  */
 class VisitMiddleware implements MiddlewareInterface
 {
   /**
-   * Procesa la solicitud entrante y registra la visita.
+   * Processes the incoming request and records visit details.
    *
    * @param mixed $requestData
    * @param callable $next
@@ -24,7 +24,7 @@ class VisitMiddleware implements MiddlewareInterface
     $userAgent = $_SERVER["HTTP_USER_AGENT"] ?? null;
     $uri = $_SERVER["REQUEST_URI"] ?? "/";
 
-    // Evitar registrar llamadas a recursos estáticos comunes si pasaran por index
+    // Avoid logging static asset requests if dispatched through index
     if (!preg_match('/\.(css|js|png|jpg|jpeg|svg|ico|woff2|woff)$/i', $uri)) {
       $country = null;
       $city = null;
@@ -36,7 +36,7 @@ class VisitMiddleware implements MiddlewareInterface
           $city = $geo["city"] ?? null;
         }
       } catch (\Throwable $t) {
-        // Fallback silencioso si el servicio GeoIp no responde
+        // Silent fallback if GeoLocation lookup fails
       }
 
       VisitModels::recordVisit($ip, $userAgent, $uri, $country, $city);

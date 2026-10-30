@@ -1,6 +1,6 @@
 <?php
 /**
- * Modales de la aplicación: Mis Paletas, Iniciar Sesión y Registrarse.
+ * Application modal dialogs: My Palettes, Login, and Registration.
  *
  * @var array|null $user
  * @var array $projects
@@ -8,7 +8,7 @@
  */
 ?>
 
-<!-- MODAL: MIS PALETAS -->
+<!-- MODAL: MY PALETTES -->
 <div id="projectsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="projectsModalTitle">
   <div class="modal-backdrop" data-close-modal="projectsModal"></div>
   <div class="modal-card">
@@ -26,14 +26,14 @@
         </div>
       <?php else: ?>
         <div id="projectsListContainer" class="flex-column gap10">
-          <!-- Renderizado dinámico vía JS -->
+          <!-- Rendered via JS -->
         </div>
       <?php endif; ?>
     </div>
   </div>
 </div>
 
-<!-- MODAL: INICIAR SESIÓN -->
+<!-- MODAL: LOGIN -->
 <div id="loginModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
   <div class="modal-backdrop" data-close-modal="loginModal"></div>
   <div class="modal-card">
@@ -68,7 +68,7 @@
   </div>
 </div>
 
-<!-- MODAL: REGISTRO -->
+<!-- MODAL: REGISTER -->
 <div id="registerModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="registerModalTitle">
   <div class="modal-backdrop" data-close-modal="registerModal"></div>
   <div class="modal-card">

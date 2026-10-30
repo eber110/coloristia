@@ -5,17 +5,17 @@ namespace App\Models;
 use Base\Builder\Builder;
 
 /**
- * Modelo para la gestión de usuarios y preferencias cromáticas.
+ * Model for user entity and color system preferences.
  */
 class UserModels extends Builder
 {
   protected $table = "users";
 
   /**
-   * Registra un nuevo usuario en la base de datos.
+   * Registers a new user in the database.
    *
-   * @param array $data Datos del usuario (username, email, password, color_system)
-   * @return int|string|false ID del usuario insertado o false en fallo.
+   * @param array $data User registration data (username, email, password, color_system).
+   * @return int|string|false Inserted user ID or false on failure.
    */
   public static function registerUser(array $data): int|string|false
   {
@@ -33,10 +33,10 @@ class UserModels extends Builder
   }
 
   /**
-   * Busca un usuario por su identificador primario.
+   * Finds a user by primary ID.
    *
-   * @param int|string $id ID del usuario.
-   * @return array|null Datos del usuario o null si no existe.
+   * @param int|string $id User ID.
+   * @return array|null User record or null if not found.
    */
   public static function findById(int|string $id): ?array
   {
@@ -50,10 +50,10 @@ class UserModels extends Builder
   }
 
   /**
-   * Busca un usuario por su dirección de correo electrónico.
+   * Finds a user by email address.
    *
-   * @param string $email Correo electrónico del usuario.
-   * @return array|null Datos del usuario o null si no existe.
+   * @param string $email User email address.
+   * @return array|null User record or null if not found.
    */
   public static function findByEmail(string $email): ?array
   {
@@ -67,10 +67,10 @@ class UserModels extends Builder
   }
 
   /**
-   * Busca un usuario por su nombre de usuario.
+   * Finds a user by username.
    *
-   * @param string $username Nombre de usuario.
-   * @return array|null Datos del usuario o null si no existe.
+   * @param string $username Username string.
+   * @return array|null User record or null if not found.
    */
   public static function findByUsername(string $username): ?array
   {
@@ -84,11 +84,11 @@ class UserModels extends Builder
   }
 
   /**
-   * Actualiza el sistema de color de preferencia del usuario.
+   * Updates user preferred color system.
    *
-   * @param int|string $userId ID del usuario.
-   * @param string $colorSystem Sistema preferido (hex, rgb, hsl, hsv, cmyk).
-   * @return bool True si se actualizó correctamente.
+   * @param int|string $userId User ID.
+   * @param string $colorSystem Preferred system (hex, rgb, hsl, hsv, cmyk).
+   * @return bool True on success.
    */
   public static function updateColorSystem(int|string $userId, string $colorSystem): bool
   {
@@ -108,10 +108,10 @@ class UserModels extends Builder
   }
 
   /**
-   * Verifica si un correo electrónico ya está registrado.
+   * Checks whether an email address is already registered.
    *
-   * @param string $email Correo electrónico.
-   * @return bool True si ya existe.
+   * @param string $email Email address to check.
+   * @return bool True if already exists.
    */
   public static function emailExists(string $email): bool
   {
@@ -119,10 +119,10 @@ class UserModels extends Builder
   }
 
   /**
-   * Verifica si un nombre de usuario ya está registrado.
+   * Checks whether a username is already taken.
    *
-   * @param string $username Nombre de usuario.
-   * @return bool True si ya existe.
+   * @param string $username Username to check.
+   * @return bool True if already exists.
    */
   public static function usernameExists(string $username): bool
   {

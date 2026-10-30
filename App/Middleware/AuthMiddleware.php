@@ -8,12 +8,12 @@ use Base\Module\ResponseModule;
 use Base\Module\Session;
 
 /**
- * Middleware para asegurar que el usuario esté autenticado.
+ * Middleware ensuring the client has an active authenticated session.
  */
 class AuthMiddleware implements MiddlewareInterface
 {
   /**
-   * Valida sesión activa antes de proceder.
+   * Validates active session before passing request to the next handler.
    *
    * @param mixed $requestData
    * @param callable $next

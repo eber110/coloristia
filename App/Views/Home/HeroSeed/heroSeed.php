@@ -1,6 +1,6 @@
 <?php
 /**
- * Visualización central del color semilla con badge interactivo.
+ * Center seed color display with interactive badge.
  */
 ?>
 <section class="hero-seed-container">
