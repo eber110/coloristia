@@ -3,11 +3,15 @@
         "aaSvgStore.js",
         "component.js",
         "config.js",
-        "querys.js"
+        "querys.js",
+        "colorEngine.js",
+        "coloristiaApp.js"
     ],
     "exclude": [],
     "functions": {
-        "defer": {},
+        "defer": {
+            "initColoristia": []
+        },
         "async": {}
     }
 }

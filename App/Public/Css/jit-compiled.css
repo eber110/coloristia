@@ -113,7 +113,12 @@ html.gsap-loaded .hover-tilt { transition: none !important; }
 .container-xl { width: 100%; margin: 0px; max-width: none; }
 
 .gap10 { gap: 10px; }
+.gap12 { gap: 12px; }
+.gap16 { gap: 16px; }
+.gap20 { gap: 20px; }
 .gap5 { gap: 5px; }
+.gap6 { gap: 6px; }
+.gap8 { gap: 8px; }
 .blur { backdrop-filter: blur(5px) !important; -webkit-backdrop-filter: blur(5px) !important; }
 .shadow { filter: drop-shadow(5px 5px 2.3px rgba(0, 0, 0, 0.43)); }
 .flex { display: flex; }
@@ -140,6 +145,10 @@ html.gsap-loaded .hover-tilt { transition: none !important; }
 .font-extrabold, .extrabold { font-weight: 800 !important; }
 .font-extralight, .extralight { font-weight: 200 !important; }
 .font { font-family: var(--font) !important; }
+.font-bold { font-weight: 700 !important; }
+.font-medium, .medium { font-weight: 500 !important; }
+.font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important; }
+.font-semibold, .semibold { font-weight: 600 !important; }
 .indent-p, .indent { text-indent: 1.5em; }
 .ita, .italic { font-style: italic !important; }
 .font-light, .light { font-weight: 300 !important; }
@@ -157,6 +166,7 @@ html.gsap-loaded .hover-tilt { transition: none !important; }
 .textw, .textw a { color: white !important; }
 .font-thin, .thin { font-weight: 100 !important; }
 .title { font-size: 35px; font-weight: 400; margin: 0px; padding: 0px; text-wrap: balance; }
+.tracking-wider { letter-spacing: 0.05em; }
 .truncate, .text-truncate, .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .underline { text-decoration: underline !important; }
 .uppercase { text-transform: uppercase !important; }
@@ -185,6 +195,7 @@ html.gsap-loaded .hover-tilt { transition: none !important; }
 .br30 { border-radius: 30px !important; overflow: clip; }
 .br5 { border-radius: 5px !important; overflow: clip; }
 .br50 { border-radius: 50px !important; overflow: clip; }
+.br8 { border-radius: 8px !important; overflow: clip; }
 .h-2 { height: 2%; }
 .h-dvh { height: 100dvh; }
 .h1 { height: 1%; }
@@ -207,9 +218,11 @@ html.gsap-loaded .hover-tilt { transition: none !important; }
 .mt10 { margin-top: 10px; }
 .mt16 { margin-top: 16px; }
 .mt5 { margin-top: 5px; }
+.mt8 { margin-top: 8px; }
 .p0 { padding: 0px !important; }
 .p1 { padding: 1px !important; }
 .p10 { padding: 10px !important; }
+.p12 { padding: 12px !important; }
 .p15 { padding: 15px !important; }
 .p2 { padding: 2px !important; }
 .p20 { padding: 20px !important; }

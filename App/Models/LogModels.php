@@ -50,7 +50,7 @@ class LogModels extends Builder
   public static function getRecent(int $limit = 50): array
   {
     $instance = new self();
-    $results = $instance->select()
+    $results = $instance->select("*")
       ->orderBy("id", "DESC")
       ->limit($limit)
       ->get();

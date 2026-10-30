@@ -17,7 +17,7 @@ class UserModels extends Builder
    * @param array $data Datos del usuario (username, email, password, color_system)
    * @return int|string|false ID del usuario insertado o false en fallo.
    */
-  public static function register(array $data): int|string|false
+  public static function registerUser(array $data): int|string|false
   {
     $instance = new self();
     $insertData = [
@@ -41,7 +41,7 @@ class UserModels extends Builder
   public static function findById(int|string $id): ?array
   {
     $instance = new self();
-    $result = $instance->select()->where("id", (string)$id)->get_one();
+    $result = $instance->select("*")->where("id", (string)$id)->get_one();
 
     if ($result && isset($result[0]) && is_array($result[0])) {
       return $result[0];
@@ -58,7 +58,7 @@ class UserModels extends Builder
   public static function findByEmail(string $email): ?array
   {
     $instance = new self();
-    $result = $instance->select()->where("email", strtolower(trim($email)))->get_one();
+    $result = $instance->select("*")->where("email", strtolower(trim($email)))->get_one();
 
     if ($result && isset($result[0]) && is_array($result[0])) {
       return $result[0];
@@ -75,7 +75,7 @@ class UserModels extends Builder
   public static function findByUsername(string $username): ?array
   {
     $instance = new self();
-    $result = $instance->select()->where("username", trim($username))->get_one();
+    $result = $instance->select("*")->where("username", trim($username))->get_one();
 
     if ($result && isset($result[0]) && is_array($result[0])) {
       return $result[0];

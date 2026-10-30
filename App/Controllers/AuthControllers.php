@@ -139,7 +139,7 @@ class AuthControllers extends Control
 
     $passwordHash = AuthModule::hashPassword($password);
 
-    $userId = UserModels::register([
+    $userId = UserModels::registerUser([
       "username"     => $username,
       "email"        => $email,
       "password"     => $passwordHash,

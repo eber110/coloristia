@@ -48,7 +48,7 @@ class ProjectModels extends Builder
   public static function getByUserId(int|string $userId): array
   {
     $instance = new self();
-    $results = $instance->select()
+    $results = $instance->select("*")
       ->where("user_id", (string)$userId)
       ->orderBy("id", "DESC")
       ->get();
@@ -66,7 +66,7 @@ class ProjectModels extends Builder
   public static function getById(int|string $id, int|string $userId): ?array
   {
     $instance = new self();
-    $result = $instance->select()
+    $result = $instance->select("*")
       ->where("id", (string)$id)
       ->where("user_id", (string)$userId)
       ->get_one();
