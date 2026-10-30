@@ -578,6 +578,7 @@ export function renderHarmonies() {
   const heroLabel = document.getElementById("heroColorLabel");
   const baseColorLabel = document.getElementById("baseColorLabel");
   const projectNameInput = document.getElementById("projectNameInput");
+  const quickColorTrigger = document.getElementById("quickColorTrigger");
   const quickColorCircle = document.getElementById("quickColorCircle");
 
   if (heroSwatch) {
@@ -589,6 +590,10 @@ export function renderHarmonies() {
   }
   if (baseColorLabel) {
     baseColorLabel.textContent = data.seed.hex;
+  }
+  if (quickColorTrigger) {
+    quickColorTrigger.style.backgroundColor = data.seed.hex;
+    quickColorTrigger.style.boxShadow = `0 0 14px ${data.seed.hex}88`;
   }
   if (quickColorCircle) {
     quickColorCircle.style.backgroundColor = data.seed.hex;
@@ -953,6 +958,9 @@ export function initColoristia() {
 
   if (nativePicker) {
     nativePicker.addEventListener("input", (e) => {
+      setSeedColor(e.target.value);
+    });
+    nativePicker.addEventListener("change", (e) => {
       setSeedColor(e.target.value);
     });
   }
