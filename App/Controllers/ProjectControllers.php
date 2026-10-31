@@ -70,7 +70,11 @@ class ProjectControllers extends Control
     ResponseModule::json([
       "status"  => "success",
       "message" => "¡Proyecto '{$projectName}' guardado correctamente!",
-      "project" => $savedProject
+      "project" => [
+        "id"           => (int)($savedProject["id"] ?? $projectId),
+        "project_name" => $savedProject["project_name"] ?? $projectName,
+        "hex_color"    => $savedProject["hex_color"] ?? $hexColor
+      ]
     ]);
   }
 
@@ -91,7 +95,15 @@ class ProjectControllers extends Control
     }
 
     $userId = AuthModule::id();
-    $projects = ProjectModels::getByUserId($userId);
+    $rawProjects = ProjectModels::getByUserId($userId);
+
+    $projects = array_map(function ($p) {
+      return [
+        "id"           => (int)$p["id"],
+        "project_name" => $p["project_name"],
+        "hex_color"    => $p["hex_color"]
+      ];
+    }, $rawProjects);
 
     ResponseModule::json([
       "status"   => "success",

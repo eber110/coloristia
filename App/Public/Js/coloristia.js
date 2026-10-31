@@ -656,6 +656,7 @@ const state = {
   colorSystem: "hex",
   isLoggedIn: false,
   projects: [],
+  isLoadingProjects: false,
   selectedHarmonyFilter: "primary",
   isInitialRender: true,
   exportFormat: "css",
@@ -1476,11 +1477,64 @@ export async function deleteProject(projectId) {
 }
 
 /**
+ * Fetches saved user projects from /proyectos/listar asynchronously on demand.
+ *
+ * @returns {Promise<void>}
+ */
+export async function loadUserProjects() {
+  if (!state.isLoggedIn) {
+    state.projects = [];
+    return;
+  }
+
+  state.isLoadingProjects = true;
+  renderProjectsList();
+
+  try {
+    const res = await fetch("/proyectos/listar", {
+      headers: {
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.status === "success" && Array.isArray(data.projects)) {
+        state.projects = data.projects;
+
+        // Ensure userPalettes in memory only retain existing saved projects or active base
+        if (state.userPalettes.length > 0 && state.projects.length > 0) {
+          state.userPalettes = state.userPalettes.filter((p) =>
+            state.projects.some((proj) => Number(proj.id) === Number(p.id) || (proj.hex_color && p.hex && proj.hex_color.toUpperCase() === p.hex.toUpperCase()))
+          );
+          saveUserPalettesToStorage();
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("No se pudieron cargar los proyectos:", err);
+  } finally {
+    state.isLoadingProjects = false;
+    renderProjectsList();
+    renderHeroSeed();
+  }
+}
+
+/**
  * Renders the saved projects list inside the drawer modal.
  */
 export function renderProjectsList() {
   const container = document.getElementById("projectsListContainer");
   if (!container) return;
+
+  if (state.isLoadingProjects) {
+    container.innerHTML = `
+      <div class="empty-projects text-center py30 flex-column gap10">
+        <p class="text-secondary text-base">Cargando tus paletas guardadas...</p>
+      </div>
+    `;
+    return;
+  }
 
   if (!state.projects || state.projects.length === 0) {
     container.innerHTML = `
@@ -1512,7 +1566,6 @@ export function renderProjectsList() {
             </button>
             ${isLoaded ? '<span class="badge-active font-mono text-xs" style="background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.4); padding: 1px 6px; border-radius: 4px; font-weight: 500;">En panel</span>' : ''}
           </div>
-          <span class="project-date font-mono text-xs text-inactive">${proj.created_at || ""}</span>
         </div>
       </div>
       <div class="flex-row items-center gap10 flex-shrink-0">
@@ -1943,11 +1996,11 @@ export function initColoristia() {
   }
   window.__coloristiaInitialized = true;
 
-  // Load initial state injected from PHP backend
-  if (window.COLORISTIA_DATA) {
-    state.isLoggedIn = !!window.COLORISTIA_DATA.isLoggedIn;
-    state.colorSystem = window.COLORISTIA_DATA.colorSystem || "hex";
-    state.projects = window.COLORISTIA_DATA.projects || [];
+  // Load initial state from DOM container dataset attributes (no inline script needed)
+  const wrapperEl = document.getElementById("coloristiaWrapper") || document.querySelector(".coloristia-wrapper");
+  if (wrapperEl) {
+    state.isLoggedIn = wrapperEl.dataset.loggedIn === "1" || wrapperEl.dataset.loggedIn === "true";
+    state.colorSystem = wrapperEl.dataset.colorSystem || "hex";
   }
 
   // Load variation count preference from localStorage (default 15, between 6 and 15)
@@ -1975,16 +2028,15 @@ export function initColoristia() {
   state.defaultColor = defaultHex;
   state.currentColor = defaultHex;
 
-  // Load user palettes from localStorage memory only if user has saved projects
+  // Load user palettes from local storage
   loadUserPalettesFromStorage();
-  if (!state.projects || state.projects.length === 0) {
-    state.userPalettes = [];
-    saveUserPalettesToStorage();
+
+  // If user is logged in, fetch saved projects asynchronously on demand/background
+  if (state.isLoggedIn) {
+    loadUserProjects();
   } else {
-    // Only keep palettes that exist in user's saved projects
-    state.userPalettes = state.userPalettes.filter((p) =>
-      state.projects.some((proj) => Number(proj.id) === Number(p.id) || (proj.hex_color && p.hex && proj.hex_color.toUpperCase() === p.hex.toUpperCase()))
-    );
+    state.projects = [];
+    state.userPalettes = [];
     saveUserPalettesToStorage();
   }
 
@@ -2220,8 +2272,10 @@ export function initColoristia() {
   const openProjectsBtn = document.getElementById("openProjectsModalBtn");
   if (openProjectsBtn) {
     openProjectsBtn.addEventListener("click", () => {
-      renderProjectsList();
       openModal("projectsModal");
+      if (state.isLoggedIn) {
+        loadUserProjects();
+      }
     });
   }
 

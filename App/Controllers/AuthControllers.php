@@ -60,14 +60,18 @@ class AuthControllers extends Control
     $colorSystem = $dbUser["color_system"] ?? "hex";
 
     if ($dbUser) {
-      // Registrar sesión persistente con JWT firmado con la semilla SEED
-      Session::create_user_session($dbUser);
+      // Registrar sesión persistente con JWT firmado con la semilla SEED sin password
+      Session::create_user_session($dbUser, ["password"]);
     } elseif (isset($_SESSION["user"])) {
       $_SESSION["user"]["color_system"] = $colorSystem;
     }
 
-    $jwtToken = (class_exists(TokenModule::class) && $dbUser)
-      ? TokenModule::configJWT($dbUser)
+    $jwtUser = $dbUser;
+    if (is_array($jwtUser)) {
+      unset($jwtUser["password"]);
+    }
+    $jwtToken = (class_exists(TokenModule::class) && $jwtUser)
+      ? TokenModule::configJWT($jwtUser)
       : null;
 
     LogModels::record("info", "auth.login", "User successfully authenticated: {$user['username']}", null, $userId);
@@ -168,11 +172,15 @@ class AuthControllers extends Control
     AuthModule::loginUsingId($userId);
     $registeredUser = UserModels::findById($userId);
     if ($registeredUser) {
-      Session::create_user_session($registeredUser);
+      Session::create_user_session($registeredUser, ["password"]);
     }
 
-    $jwtToken = (class_exists(TokenModule::class) && $registeredUser)
-      ? TokenModule::configJWT($registeredUser)
+    $jwtRegUser = $registeredUser;
+    if (is_array($jwtRegUser)) {
+      unset($jwtRegUser["password"]);
+    }
+    $jwtToken = (class_exists(TokenModule::class) && $jwtRegUser)
+      ? TokenModule::configJWT($jwtRegUser)
       : null;
 
     LogModels::record("info", "auth.register", "New user registered: {$username}", null, (int)$userId);

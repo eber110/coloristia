@@ -3,7 +3,6 @@
  * Application modal dialogs: My Palettes, Login, and Registration.
  *
  * @var array|null $user
- * @var array $projects
  * @var bool $isLoggedIn
  */
 ?>

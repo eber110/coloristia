@@ -3,20 +3,11 @@
  * Main orchestrator view for Coloristia.
  *
  * @var array|null $user
- * @var array $projects
  * @var bool $isLoggedIn
  * @var string $colorSystem
  */
 ?>
-<script>
-  window.COLORISTIA_DATA = {
-    isLoggedIn: <?= $isLoggedIn ? 'true' : 'false' ?>,
-    colorSystem: <?= json_encode($colorSystem, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>,
-    projects: <?= json_encode($projects, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>
-  };
-</script>
-
-<div class="coloristia-wrapper">
+<div class="coloristia-wrapper" id="coloristiaWrapper" data-logged-in="<?= $isLoggedIn ? '1' : '0' ?>" data-color-system="<?= e($colorSystem) ?>">
   <div class="ambient-glow ambient-glow-primary" id="ambientGlow1" aria-hidden="true"></div>
   <div class="ambient-glow ambient-glow-secondary" id="ambientGlow2" aria-hidden="true"></div>
   <div class="ambient-glow ambient-glow-tertiary" id="ambientGlow3" aria-hidden="true"></div>
@@ -29,7 +20,7 @@
     ?>
   </div>
   <?php
-    _part("Home.modals", ["user" => $user, "projects" => $projects, "isLoggedIn" => $isLoggedIn]);
+    _part("Home.modals", ["user" => $user, "isLoggedIn" => $isLoggedIn]);
     _part("Home.footer");
   ?>
 </div>

@@ -6,7 +6,6 @@ use Base\Control\Control;
 use Base\Module\AuthModule;
 use Base\Module\SeoModule;
 use Base\Module\Session;
-use App\Models\ProjectModels;
 use App\Models\UserModels;
 
 /**
@@ -15,7 +14,7 @@ use App\Models\UserModels;
 class HomeControllers extends Control
 {
   /**
-   * Renders the home view with user data and saved projects.
+   * Renders the home view with user data.
    *
    * @return void
    */
@@ -25,7 +24,6 @@ class HomeControllers extends Control
 
     $isLoggedIn = AuthModule::check();
     $user = null;
-    $projects = [];
     $colorSystem = "hex";
 
     if ($isLoggedIn) {
@@ -35,10 +33,10 @@ class HomeControllers extends Control
       if ($userId) {
         $dbUser = UserModels::findById($userId);
         if ($dbUser) {
+          unset($dbUser["password"]);
           $user = array_merge($user, $dbUser);
           $colorSystem = $dbUser["color_system"] ?? "hex";
         }
-        $projects = ProjectModels::getByUserId($userId);
       }
     }
 
@@ -47,7 +45,6 @@ class HomeControllers extends Control
 
     return $this->view("Home.home", [
       "user"        => $user,
-      "projects"    => $projects,
       "isLoggedIn"  => $isLoggedIn,
       "colorSystem" => $colorSystem
     ]);
