@@ -116,8 +116,6 @@ html.gsap-loaded .hover-tilt { transition: none !important; }
 .gap12 { gap: 12px; }
 .gap14 { gap: 14px; }
 .gap16 { gap: 16px; }
-.gap20 { gap: 20px; }
-.gap30 { gap: 30px; }
 .gap5 { gap: 5px; }
 .gap6 { gap: 6px; }
 .gap8 { gap: 8px; }
@@ -171,6 +169,7 @@ html.gsap-loaded .hover-tilt { transition: none !important; }
 .tracking-wider { letter-spacing: 0.05em; }
 .truncate, .text-truncate, .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .underline { text-decoration: underline !important; }
+.upper { text-transform: uppercase !important; }
 .uppercase { text-transform: uppercase !important; }
 .col-1 { grid-template-columns: repeat(1, 1fr); }
 .col-12 { grid-template-columns: repeat(12, 1fr); }

@@ -4,34 +4,14 @@
  */
 ?>
 <section class="hero-seed-container">
-  <div class="hero-seeds-track flex-row items-center justify-center gap30 flex-wrap">
-    <!-- Primary Working Seed Circle -->
-    <div class="hero-seed-item flex-column items-center">
-      <div id="heroColorSwatch" class="hero-color-circle" title="Haz clic para abrir el selector de color" style="background-color: #C42127;">
-        <div class="hero-circle-inner-btn" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 20h9"></path>
-            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-          </svg>
-        </div>
+  <div id="heroSeedsTrack" class="hero-seeds-track">
+    <!-- Base / Default Working Color Circle (Always visible, changes on refresh or random) -->
+    <div id="heroDefaultSeedItem" class="hero-seed-item">
+      <div id="heroColorSwatch" class="hero-color-circle" title="Haz clic para abrir el selector de color" style="background-color: #C42127;"></div>
+      <div class="hero-seed-label-wrap">
+        <button type="button" id="heroColorLabel" class="hero-seed-hex-btn font-mono" title="Haz clic para abrir el selector de color">#C42127</button>
+        <div class="hero-seed-underline"></div>
       </div>
-      <button type="button" id="heroColorLabel" class="hero-color-tag font-mono" title="Haz clic para abrir el selector de color">#C42127</button>
-    </div>
-
-    <!-- Loaded / Reference Palette Circle (appears when loaded or pinned) -->
-    <div id="heroLoadedPaletteBox" class="hero-seed-item flex-column items-center" style="display: none;">
-      <button type="button" id="goToLoadedPaletteBtn" class="pill-go-to-palette" title="Ir a esta paleta">Ir a la paleta</button>
-      <div id="heroLoadedSwatch" class="hero-color-circle hero-loaded-circle" title="Haz clic para usar esta paleta">
-        <div class="hero-loaded-actions flex-row items-center justify-center gap8">
-          <button type="button" id="editLoadedPaletteNameBtn" class="hero-loaded-action-btn" title="Editar nombre" aria-label="Editar">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-          </button>
-          <button type="button" id="dismissLoadedPaletteBtn" class="hero-loaded-action-btn hero-loaded-dismiss-btn" title="Quitar de referencia" aria-label="Cerrar">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          </button>
-        </div>
-      </div>
-      <span id="heroLoadedLabel" class="hero-loaded-hex-label font-mono">#D56F62</span>
     </div>
   </div>
 

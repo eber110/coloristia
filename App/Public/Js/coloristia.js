@@ -476,22 +476,21 @@ export function generatePalette(H0, S0, L0, harmonyKey = "monochromatic", N = 6,
   // Step 2: Calculate L, S, and Bezold-Brücke micro-rotation per anchor
   const colors = [];
 
-  // Dynamic Lightness Range:
-  // If user chooses an ultra-dark color (L0 <= 25): dark tolerance erased down to L0 (or 0 for black)
-  // If user chooses an ultra-light color (L0 >= 75): light tolerance erased up to L0 (or 100 for white)
-  // If user chooses intermediate (25 < L0 < 75): standard tolerances (15% to 90%)
-  let Lmin = 15;
+  // Continuous, smooth lightness range:
+  // Baseline: Lmin = 14%, Lmax = 90% (rich, vibrant darks without premature murky black collapse)
+  // When L0 < 18%: smoothly scale Lmin down towards 0% using smoothstep curve (for near-black/black seeds)
+  // When L0 > 82%: smoothly scale Lmax up towards 100% using smoothstep curve (for near-white/white seeds)
+  let Lmin = 14;
   let Lmax = 90;
 
-  if (L0 <= 25) {
-    Lmin = Math.max(0, Math.min(L0, 4));
-    Lmax = 90;
-  } else if (L0 >= 75) {
-    Lmin = 15;
-    Lmax = Math.min(100, Math.max(L0, 96));
-  } else {
-    Lmin = 15;
-    Lmax = 90;
+  if (L0 < 18) {
+    const t = Math.max(0, L0 / 18);
+    // Smooth cubic smoothstep curve (derivative is 0 at L0 = 18 for seamless C1 continuity)
+    Lmin = 14 * (t * t * (3 - 2 * t));
+  } else if (L0 > 82) {
+    const t = Math.min(1, Math.max(0, (L0 - 82) / 18));
+    // Smooth cubic smoothstep curve (derivative is 0 at L0 = 82 for seamless C1 continuity)
+    Lmax = 90 + 10 * (t * t * (3 - 2 * t));
   }
 
   // Check if color is neutral grayscale (grays, black, white)
@@ -505,17 +504,6 @@ export function generatePalette(H0, S0, L0, harmonyKey = "monochromatic", N = 6,
       let Ljm;
       if (Mj === 1) {
         Ljm = L0;
-      } else if (j === 0) {
-        // Seed anchor: smoothly interpolate through L0 so the user's selected shade is preserved
-        const mAnchor = Math.max(0, Math.min(Mj - 1, Math.round(((L0 - Lmin) / (Lmax - Lmin || 1)) * (Mj - 1))));
-        if (m === mAnchor) {
-          Ljm = L0;
-        } else if (m < mAnchor) {
-          Ljm = Lmin + (m / (mAnchor || 1)) * (L0 - Lmin);
-        } else {
-          const denom = (Mj - 1 - mAnchor) || 1;
-          Ljm = L0 + ((m - mAnchor) / denom) * (Lmax - L0);
-        }
       } else {
         const deltaL = (Lmax - Lmin) / (Mj - 1);
         Ljm = Lmin + (m * deltaL);
@@ -612,13 +600,81 @@ export function generateAllHarmonies(seedHex, variations = 6, sortMode = "family
  */
 const state = {
   currentColor: "#C42127",
+  defaultColor: "#C42127",
+  activeSlot: "default",
+  userPalettes: [],
   variations: 15,
   colorSystem: "hex",
   isLoggedIn: false,
   projects: [],
   selectedHarmonyFilter: "primary",
-  loadedPalette: null
+  isInitialRender: true,
+  get loadedPalette() {
+    return this.userPalettes.length > 0 ? {
+      id: this.userPalettes[0].id,
+      project_name: this.userPalettes[0].name,
+      hex_color: this.userPalettes[0].hex
+    } : null;
+  },
+  set loadedPalette(val) {
+    if (!val || !val.hex_color) {
+      this.userPalettes = [];
+      this.activeSlot = "default";
+      saveUserPalettesToStorage();
+    } else {
+      this.userPalettes = [{
+        id: val.id || null,
+        name: val.project_name || "Paleta fijada",
+        hex: val.hex_color
+      }];
+      this.activeSlot = 0;
+      saveUserPalettesToStorage();
+    }
+  }
 };
+
+export const MAX_USER_PALETTES = 5;
+
+/**
+ * Normalizes any valid 3-digit or 6-digit HEX string to uppercase 6-digit '#RRGGBB'.
+ *
+ * @param {string} hex
+ * @returns {string|null}
+ */
+export function normalizeHex6(hex) {
+  let clean = String(hex || "").trim().replace(/^#/, "");
+  if (clean.length === 3) {
+    clean = clean.split("").map((c) => c + c).join("");
+  }
+  if (/^[0-9a-fA-F]{6}$/.test(clean)) {
+    return "#" + clean.toUpperCase();
+  }
+  return null;
+}
+
+/**
+ * Saves loaded user palettes in localStorage memory.
+ */
+export function saveUserPalettesToStorage() {
+  try {
+    localStorage.setItem("coloristia_user_palettes", JSON.stringify(state.userPalettes));
+  } catch (_) {}
+}
+
+/**
+ * Loads saved user palettes from localStorage memory.
+ */
+export function loadUserPalettesFromStorage() {
+  try {
+    const raw = localStorage.getItem("coloristia_user_palettes");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        state.userPalettes = parsed.filter((p) => p && typeof p.hex === "string").slice(0, MAX_USER_PALETTES);
+      }
+    }
+  } catch (_) {}
+}
 
 /**
  * Escapes special HTML characters to prevent XSS.
@@ -703,78 +759,212 @@ export async function copyToClipboard(text) {
 }
 
 /**
- * Renders the hero seed swatches (working seed circle and pinned/loaded palette reference circle).
+ * Helper to apply dynamic shadow and border to circle swatches based on color brightness.
+ *
+ * @param {HTMLElement} el
+ * @param {string} hex
+ * @param {boolean} isActive
  */
-export function renderHeroSeed() {
-  const heroSwatch = document.getElementById("heroColorSwatch");
-  const heroLabel = document.getElementById("heroColorLabel");
-  const baseColorLabel = document.getElementById("baseColorLabel");
-  const quickColorTrigger = document.getElementById("quickColorTrigger");
-  const quickColorCircle = document.getElementById("quickColorCircle");
-
-  const rgb = hexToRgb(state.currentColor);
+function applySwatchShadow(el, hex, isActive) {
+  const rgb = hexToRgb(hex);
   const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-  const isPureBlackOrWhite = hsl.l <= 2 || hsl.l >= 98;
-
-  if (heroSwatch) {
-    heroSwatch.style.backgroundColor = state.currentColor;
-    if (hsl.l >= 98) {
-      heroSwatch.style.boxShadow = "0 10px 40px -10px rgba(255,255,255,0.7), 0 0 35px rgba(255,255,255,0.5)";
-      heroSwatch.style.borderColor = "#ffffff";
-    } else if (hsl.l <= 2) {
-      heroSwatch.style.boxShadow = "0 10px 40px -10px rgba(0,0,0,0.9), 0 0 25px rgba(255,255,255,0.15)";
-      heroSwatch.style.borderColor = "rgba(255, 255, 255, 0.4)";
-    } else {
-      heroSwatch.style.boxShadow = `0 10px 40px -10px ${state.currentColor}88, 0 0 25px ${state.currentColor}44`;
-      heroSwatch.style.borderColor = "rgba(255, 255, 255, 0.95)";
-    }
-  }
-
-  if (heroLabel) {
-    heroLabel.textContent = state.currentColor;
-  }
-  if (baseColorLabel) {
-    baseColorLabel.textContent = isPureBlackOrWhite ? `${state.currentColor} (Neutro)` : state.currentColor;
-  }
-  if (quickColorTrigger) {
-    quickColorTrigger.style.backgroundColor = state.currentColor;
-    quickColorTrigger.style.boxShadow = `0 0 14px ${state.currentColor}88`;
-  }
-  if (quickColorCircle) {
-    quickColorCircle.style.backgroundColor = state.currentColor;
-  }
-
-  // Loaded or pinned reference palette circle
-  const loadedBox = document.getElementById("heroLoadedPaletteBox");
-  const loadedSwatch = document.getElementById("heroLoadedSwatch");
-  const loadedLabel = document.getElementById("heroLoadedLabel");
-
-  if (loadedBox) {
-    if (state.loadedPalette && state.loadedPalette.hex_color) {
-      loadedBox.style.display = "flex";
-      if (loadedSwatch) {
-        loadedSwatch.style.backgroundColor = state.loadedPalette.hex_color;
-        loadedSwatch.style.boxShadow = `0 10px 30px -8px ${state.loadedPalette.hex_color}aa, 0 0 20px ${state.loadedPalette.hex_color}55`;
-        loadedSwatch.title = `Paleta cargada: ${state.loadedPalette.project_name || state.loadedPalette.hex_color}`;
-      }
-      if (loadedLabel) {
-        loadedLabel.textContent = state.loadedPalette.hex_color;
-        loadedLabel.title = state.loadedPalette.project_name || state.loadedPalette.hex_color;
-      }
-    } else {
-      loadedBox.style.display = "none";
-    }
+  if (hsl.l >= 98) {
+    el.style.boxShadow = isActive
+      ? "0 10px 40px -10px rgba(255,255,255,0.7), 0 0 35px rgba(255,255,255,0.5)"
+      : "0 6px 20px -6px rgba(255,255,255,0.4)";
+    el.style.borderColor = "#ffffff";
+  } else if (hsl.l <= 2) {
+    el.style.boxShadow = isActive
+      ? "0 10px 40px -10px rgba(0,0,0,0.9), 0 0 25px rgba(255,255,255,0.15)"
+      : "0 6px 20px -6px rgba(0,0,0,0.7)";
+    el.style.borderColor = "rgba(255, 255, 255, 0.4)";
+  } else {
+    el.style.boxShadow = isActive
+      ? `0 10px 40px -10px ${hex}88, 0 0 25px ${hex}44`
+      : `0 8px 25px -8px ${hex}77, 0 0 15px ${hex}33`;
+    el.style.borderColor = isActive ? "rgba(255, 255, 255, 0.95)" : "rgba(255, 255, 255, 0.75)";
   }
 }
 
 /**
- * Renders chromatic harmonies grid and hero preview.
+ * Renders the hero seed swatches (default working color + up to 5 user loaded palettes, max 6 total colors).
  */
-export function renderHarmonies() {
+export function renderHeroSeed(options = {}) {
+  const seedsTrack = document.getElementById("heroSeedsTrack");
+  const baseColorLabel = document.getElementById("baseColorLabel");
+  const quickColorTrigger = document.getElementById("quickColorTrigger");
+  const quickColorCircle = document.getElementById("quickColorCircle");
+  const clearPinnedBtn = document.getElementById("clearPinnedBtn");
+
+  const activeHex = state.currentColor || state.defaultColor;
+  const rgb = hexToRgb(activeHex);
+  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  const isPureBlackOrWhite = hsl.l <= 2 || hsl.l >= 98;
+
+  if (baseColorLabel) {
+    baseColorLabel.textContent = isPureBlackOrWhite ? `${activeHex} (Neutro)` : activeHex;
+  }
+  if (quickColorTrigger) {
+    quickColorTrigger.style.backgroundColor = activeHex;
+    quickColorTrigger.style.boxShadow = `0 0 14px ${activeHex}88`;
+  }
+  if (quickColorCircle) {
+    quickColorCircle.style.backgroundColor = activeHex;
+  }
+
+  // 1. User Palettes (up to 5) + 1 Default Working Color = Max 6 colors
+  const userPalettes = (state.userPalettes || []).slice(0, MAX_USER_PALETTES);
+
+  // Validate activeSlot boundaries
+  if (typeof state.activeSlot === "number" && (state.activeSlot < 0 || state.activeSlot >= userPalettes.length)) {
+    state.activeSlot = "default";
+    state.currentColor = state.defaultColor;
+  }
+
+  // "el menu de borrar colores debe desaparecer si solo tenemos 1 color cargado"
+  // (only appears if there are user palettes loaded alongside default color)
+  if (clearPinnedBtn) {
+    clearPinnedBtn.style.display = userPalettes.length > 0 ? "inline-flex" : "none";
+  }
+
+  if (!seedsTrack || options.skipTrackRebuild) return;
+
+  // Distribute palettes around the default color (left & right) as in user diagram:
+  // e.g. 5 user palettes: 2 left, 1 default center, 3 right (total 6 swatches).
+  let leftCount = 0;
+  if (userPalettes.length === 1) leftCount = 1;
+  else if (userPalettes.length === 2) leftCount = 1;
+  else if (userPalettes.length === 3) leftCount = 2;
+  else if (userPalettes.length === 4) leftCount = 2;
+  else if (userPalettes.length === 5) leftCount = 2;
+
+  const leftList = userPalettes.slice(0, leftCount).map((p, i) => ({ ...p, originalIndex: i }));
+  const rightList = userPalettes.slice(leftCount).map((p, i) => ({ ...p, originalIndex: leftCount + i }));
+
+  const defaultItem = {
+    isDefault: true,
+    hex: state.defaultColor,
+    name: "Color base"
+  };
+
+  const fullList = [
+    ...leftList.map((p) => ({ ...p, isDefault: false })),
+    defaultItem,
+    ...rightList.map((p) => ({ ...p, isDefault: false }))
+  ];
+
+  seedsTrack.innerHTML = fullList.map((item) => {
+    if (item.isDefault) {
+      const isDefaultActive = state.activeSlot === "default";
+      return `
+        <div id="heroDefaultSeedItem" class="hero-seed-item">
+          ${!isDefaultActive ? `<button type="button" class="pill-go-to-palette" data-action="activate-default" title="Ir al color base">Color base</button>` : ""}
+          <div id="heroColorSwatch"
+               class="hero-color-circle ${isDefaultActive ? "hero-circle-active" : ""}"
+               data-action="circle-default"
+               data-hex="${state.defaultColor}"
+               style="background-color: ${state.defaultColor};"
+               title="Haz clic para seleccionar o usar el color base">
+          </div>
+          <div class="hero-seed-label-wrap">
+            <button type="button" id="heroColorLabel" class="hero-seed-hex-btn font-mono" data-action="activate-default" title="Haz clic para seleccionar o usar el color base">${state.defaultColor}</button>
+            <div class="hero-seed-underline"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    const isPalActive = state.activeSlot === item.originalIndex;
+    return `
+      <div class="hero-seed-item hero-user-palette-item" data-index="${item.originalIndex}">
+        ${!isPalActive ? `<button type="button" class="pill-go-to-palette" data-action="activate-user" data-index="${item.originalIndex}" title="Ir a esta paleta">Ir a la paleta</button>` : ""}
+        <div class="hero-color-circle hero-loaded-circle ${isPalActive ? "hero-circle-active" : ""}"
+             data-action="circle-user"
+             data-index="${item.originalIndex}"
+             data-hex="${item.hex}"
+             style="background-color: ${item.hex};"
+             title="${escapeHtml(item.name || item.hex)}. Haz clic para usarla.">
+          <div class="hero-loaded-actions flex-row items-center justify-center gap8">
+            <button type="button" class="hero-loaded-action-btn hero-loaded-dismiss-btn" data-action="dismiss-user" data-index="${item.originalIndex}" title="Quitar del panel" aria-label="Cerrar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+        </div>
+        <div class="hero-seed-label-wrap">
+          <button type="button" class="hero-seed-hex-btn font-mono" data-action="activate-user" data-index="${item.originalIndex}" title="${escapeHtml(item.name || item.hex)}">${item.hex}</button>
+          <div class="hero-seed-underline"></div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // Apply luminous swatch shadow & borders
+  seedsTrack.querySelectorAll(".hero-color-circle").forEach((circle) => {
+    const hex = circle.dataset.hex;
+    const isAct = circle.classList.contains("hero-circle-active");
+    if (hex) {
+      applySwatchShadow(circle, hex, isAct);
+    }
+  });
+}
+
+/**
+ * Creates a single color card element.
+ *
+ * @param {object} colorObj
+ * @param {boolean} isColumnDisabled
+ * @param {number} index
+ * @param {string|null} animMode 'initial' | 'add' | null
+ * @returns {HTMLButtonElement}
+ */
+function createColorCard(colorObj, isColumnDisabled, index, animMode = null) {
+  const card = document.createElement("button");
+  card.type = "button";
+  card.className = "color-card";
+  if (animMode === "initial") {
+    card.classList.add("card-initial-appear");
+  } else if (animMode === "add") {
+    card.classList.add("card-animate-in");
+  }
+
+  card.style.backgroundColor = colorObj.hex;
+  card.style.color = colorObj.textColor;
+  card.style.setProperty("--card-index", index);
+
+  if (isColumnDisabled) {
+    card.setAttribute("disabled", "true");
+    card.setAttribute("aria-disabled", "true");
+    card.title = "Esta paleta está desactivada para tonos neutros.";
+  }
+
+  const formatted = formatColorValue(colorObj, state.colorSystem);
+  card.dataset.formattedColor = formatted;
+  card.innerHTML = `
+    <span class="color-value font-mono">${formatted}</span>
+    <span class="copy-hint">${isColumnDisabled ? "Inactiva" : "Copiar"}</span>
+  `;
+
+  card.addEventListener("click", () => {
+    if (card.disabled || card.getAttribute("aria-disabled") === "true") return;
+    copyToClipboard(card.dataset.formattedColor || formatted);
+  });
+
+  return card;
+}
+
+/**
+ * Renders chromatic harmonies grid and hero preview.
+ *
+ * @param {object} [options]
+ * @param {boolean} [options.isInitial]
+ * @param {string|null} [options.variationChange]
+ * @param {boolean} [options.skipHeroRebuild]
+ */
+export function renderHarmonies(options = {}) {
   const data = generateAllHarmonies(state.currentColor, state.variations, "family");
 
   // Update hero swatches and labels
-  renderHeroSeed();
+  renderHeroSeed({ skipTrackRebuild: !!options.skipHeroRebuild });
 
   const projectNameInput = document.getElementById("projectNameInput");
   if (projectNameInput && (!projectNameInput.value || projectNameInput.dataset.auto === "true")) {
@@ -784,7 +974,6 @@ export function renderHarmonies() {
 
   const isPureBlackOrWhite = (data.seed.hsl.l <= 2) || (data.seed.hsl.l >= 98);
 
-  // 5 primary harmony columns visible by default
   const primaryKeys = [
     "monochromatic",
     "complementary",
@@ -793,7 +982,6 @@ export function renderHarmonies() {
     "splitComplementary"
   ];
 
-  // Extended and auxiliary harmonies
   const extraKeys = [
     "analogousExtended",
     "analogousAccented",
@@ -804,7 +992,6 @@ export function renderHarmonies() {
     "goldenRatio"
   ];
 
-  // Keep ALL columns rendered; when black or white is selected, mark non-monochromatic columns as deactivated
   const targetKeys = state.selectedHarmonyFilter === "extra"
     ? extraKeys
     : (state.selectedHarmonyFilter === "all" ? [...primaryKeys, ...extraKeys] : primaryKeys);
@@ -812,64 +999,128 @@ export function renderHarmonies() {
   const container = document.getElementById("harmoniesGrid");
   if (!container) return;
 
-  container.innerHTML = "";
+  const isInitial = options.isInitial || state.isInitialRender;
+  const variationChange = options.variationChange || null;
 
-  targetKeys.forEach((key) => {
-    const item = data.harmonies[key];
-    if (!item) return;
-
-    const isColumnDisabled = isPureBlackOrWhite && key !== "monochromatic";
-
-    const column = document.createElement("div");
-    column.className = `harmony-column flex-column gap12 ${isColumnDisabled ? "harmony-column-disabled" : ""}`;
-
-    const title = document.createElement("h3");
-    title.className = "harmony-title text-center";
-    if (isColumnDisabled) {
-      title.innerHTML = `${item.rule.name} <span class="badge-disabled">(Desactivada)</span>`;
-    } else if (isPureBlackOrWhite && key === "monochromatic") {
-      title.innerHTML = `${item.rule.name} <span class="badge-mono">(Modo Neutro)</span>`;
-    } else {
-      title.textContent = item.rule.name;
+  // Check if existing columns match target keys
+  const existingColumns = container.querySelectorAll(".harmony-column");
+  const columnKeyMap = {};
+  existingColumns.forEach((col) => {
+    if (col.dataset.harmonyKey) {
+      columnKeyMap[col.dataset.harmonyKey] = col;
     }
-    column.appendChild(title);
-
-    const cardsContainer = document.createElement("div");
-    cardsContainer.className = "cards-stack flex-column gap8 w100";
-
-    item.colors.forEach((colorObj, m) => {
-      const card = document.createElement("button");
-      card.type = "button";
-      card.className = "color-card";
-      card.style.backgroundColor = colorObj.hex;
-      card.style.color = colorObj.textColor;
-      card.style.setProperty("--card-index", m);
-
-      if (isColumnDisabled) {
-        card.setAttribute("disabled", "true");
-        card.setAttribute("aria-disabled", "true");
-        card.title = "Esta paleta está desactivada para tonos neutros.";
-      }
-
-      const formatted = formatColorValue(colorObj, state.colorSystem);
-
-      card.innerHTML = `
-        <span class="color-value font-mono">${formatted}</span>
-        <span class="copy-hint">${isColumnDisabled ? "Inactiva" : "Copiar"}</span>
-      `;
-
-      if (!isColumnDisabled) {
-        card.addEventListener("click", () => {
-          copyToClipboard(formatted);
-        });
-      }
-
-      cardsContainer.appendChild(card);
-    });
-
-    column.appendChild(cardsContainer);
-    container.appendChild(column);
   });
+
+  const columnsMatch = targetKeys.length === existingColumns.length &&
+    targetKeys.every((k) => !!columnKeyMap[k]);
+
+  if (!columnsMatch) {
+    container.innerHTML = "";
+    targetKeys.forEach((key) => {
+      const item = data.harmonies[key];
+      if (!item) return;
+
+      const isColumnDisabled = isPureBlackOrWhite && key !== "monochromatic";
+      const column = document.createElement("div");
+      column.className = `harmony-column flex-column gap12 ${isColumnDisabled ? "harmony-column-disabled" : ""}`;
+      column.dataset.harmonyKey = key;
+
+      const title = document.createElement("h3");
+      title.className = "harmony-title text-center";
+      if (isColumnDisabled) {
+        title.innerHTML = `${item.rule.name} <span class="badge-disabled">(Desactivada)</span>`;
+      } else if (isPureBlackOrWhite && key === "monochromatic") {
+        title.innerHTML = `${item.rule.name} <span class="badge-mono">(Modo Neutro)</span>`;
+      } else {
+        title.textContent = item.rule.name;
+      }
+      column.appendChild(title);
+
+      const cardsContainer = document.createElement("div");
+      cardsContainer.className = "cards-stack flex-column gap8 w100";
+
+      item.colors.forEach((colorObj, m) => {
+        const card = createColorCard(colorObj, isColumnDisabled, m, isInitial ? "initial" : null);
+        cardsContainer.appendChild(card);
+      });
+
+      column.appendChild(cardsContainer);
+      container.appendChild(column);
+    });
+  } else {
+    // Columns already exist: update existing cards in place without destroying DOM!
+    targetKeys.forEach((key) => {
+      const item = data.harmonies[key];
+      const column = columnKeyMap[key];
+      if (!item || !column) return;
+
+      const isColumnDisabled = isPureBlackOrWhite && key !== "monochromatic";
+      if (isColumnDisabled) {
+        column.classList.add("harmony-column-disabled");
+      } else {
+        column.classList.remove("harmony-column-disabled");
+      }
+
+      const title = column.querySelector(".harmony-title");
+      if (title) {
+        if (isColumnDisabled) {
+          title.innerHTML = `${item.rule.name} <span class="badge-disabled">(Desactivada)</span>`;
+        } else if (isPureBlackOrWhite && key === "monochromatic") {
+          title.innerHTML = `${item.rule.name} <span class="badge-mono">(Modo Neutro)</span>`;
+        } else {
+          title.textContent = item.rule.name;
+        }
+      }
+
+      const cardsContainer = column.querySelector(".cards-stack");
+      if (!cardsContainer) return;
+
+      const existingCards = cardsContainer.children;
+      const existingCount = existingCards.length;
+      const newCount = item.colors.length;
+
+      // Update existing cards
+      item.colors.forEach((colorObj, m) => {
+        const formatted = formatColorValue(colorObj, state.colorSystem);
+        if (m < existingCount) {
+          const card = existingCards[m];
+          card.style.backgroundColor = colorObj.hex;
+          card.style.color = colorObj.textColor;
+          card.style.setProperty("--card-index", m);
+          card.dataset.formattedColor = formatted;
+          card.classList.remove("card-initial-appear", "card-animate-in");
+          card.style.animation = "none";
+
+          if (isColumnDisabled) {
+            card.setAttribute("disabled", "true");
+            card.setAttribute("aria-disabled", "true");
+            card.title = "Esta paleta está desactivada para tonos neutros.";
+          } else {
+            card.removeAttribute("disabled");
+            card.removeAttribute("aria-disabled");
+            card.title = "";
+          }
+
+          const valEl = card.querySelector(".color-value");
+          if (valEl) valEl.textContent = formatted;
+          const hintEl = card.querySelector(".copy-hint");
+          if (hintEl) hintEl.textContent = isColumnDisabled ? "Inactiva" : "Copiar";
+        } else {
+          // Newly added variation (e.g. clicked +)
+          // ONLY this card gets the entrance animation!
+          const card = createColorCard(colorObj, isColumnDisabled, m, variationChange === "add" ? "add" : null);
+          cardsContainer.appendChild(card);
+        }
+      });
+
+      // If variations decreased (clicked -), remove excess cards from bottom
+      while (cardsContainer.children.length > newCount) {
+        cardsContainer.lastElementChild.remove();
+      }
+    });
+  }
+
+  state.isInitialRender = false;
 }
 
 /**
@@ -879,21 +1130,37 @@ export function renderHarmonies() {
  * @param {boolean} syncPicker Whether to update the custom picker handles.
  */
 export function setSeedColor(hex, syncPicker = true) {
-  let clean = hex.trim();
-  if (!clean.startsWith("#")) {
-    clean = "#" + clean;
-  }
-  if (!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(clean)) {
+  const upper = normalizeHex6(hex);
+  if (!upper) {
     return;
   }
 
-  state.currentColor = clean.toUpperCase();
+  state.currentColor = upper;
+
+  if (state.activeSlot === "default") {
+    state.defaultColor = upper;
+  } else if (typeof state.activeSlot === "number" && state.userPalettes[state.activeSlot]) {
+    state.userPalettes[state.activeSlot].hex = upper;
+    saveUserPalettesToStorage();
+  }
 
   if (syncPicker) {
     syncPickerFromColor(state.currentColor);
   }
 
-  renderHarmonies();
+  // Update active swatch live without tearing down popover
+  const activeCircle = document.querySelector(".hero-circle-active");
+  if (activeCircle) {
+    activeCircle.style.backgroundColor = upper;
+    activeCircle.dataset.hex = upper;
+    applySwatchShadow(activeCircle, upper, true);
+    const labelBtn = activeCircle.parentElement ? activeCircle.parentElement.querySelector(".hero-seed-hex-btn") : null;
+    if (labelBtn) {
+      labelBtn.textContent = upper;
+    }
+  }
+
+  renderHarmonies({ skipHeroRebuild: !!activeCircle });
 }
 
 /**
@@ -914,20 +1181,33 @@ export function changeVariations(delta) {
     if (countDisplay) {
       countDisplay.textContent = next;
     }
-    renderHarmonies();
+    renderHarmonies({ variationChange: delta > 0 ? "add" : "remove" });
   }
 }
 
 /**
- * Generates a vibrant random seed color and applies it directly without blocking.
+ * Generates a vibrant random hex color code.
+ *
+ * @returns {string}
  */
-export function generateRandomColor() {
+export function getRandomVibrantHex() {
   const h = Math.floor(Math.random() * 360);
   const s = Math.floor(65 + Math.random() * 30);
   const l = Math.floor(40 + Math.random() * 25);
   const rgb = hslToRgb(h, s, l);
-  const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
-  setSeedColor(hex);
+  return rgbToHex(rgb.r, rgb.g, rgb.b);
+}
+
+/**
+ * Generates a vibrant random seed color for the default color without corrupting user palettes.
+ */
+export function generateRandomColor() {
+  const hex = getRandomVibrantHex();
+  state.activeSlot = "default";
+  state.defaultColor = hex;
+  state.currentColor = hex;
+  syncPickerFromColor(hex);
+  renderHarmonies();
 }
 
 /**
@@ -994,6 +1274,19 @@ export async function saveCurrentProject() {
       showToast(res.message, "success");
       if (res.project) {
         state.projects.unshift(res.project);
+        if (state.userPalettes.length < MAX_USER_PALETTES) {
+          const alreadyIn = state.userPalettes.some((p) => Number(p.id) === Number(res.project.id));
+          if (!alreadyIn) {
+            state.userPalettes.push({
+              id: res.project.id,
+              name: res.project.project_name,
+              hex: res.project.hex_color
+            });
+            state.activeSlot = state.userPalettes.length - 1;
+            saveUserPalettesToStorage();
+            renderHeroSeed();
+          }
+        }
         renderProjectsList();
       }
     } else {
@@ -1032,8 +1325,10 @@ export async function renameProject(projectId, newName) {
       if (target) {
         target.project_name = newName;
       }
-      if (state.loadedPalette && Number(state.loadedPalette.id) === Number(projectId)) {
-        state.loadedPalette.project_name = newName;
+      const inUserPal = state.userPalettes.find((p) => Number(p.id) === Number(projectId));
+      if (inUserPal) {
+        inUserPal.name = newName;
+        saveUserPalettesToStorage();
         renderHeroSeed();
       }
       renderProjectsList();
@@ -1068,11 +1363,31 @@ export async function deleteProject(projectId) {
 
     const res = await response.json();
     if (res.status === "success") {
-      if (state.loadedPalette && Number(state.loadedPalette.id) === Number(projectId)) {
-        state.loadedPalette = null;
+      state.projects = state.projects.filter((p) => Number(p.id) !== Number(projectId));
+
+      // Remove from active user palettes in work panel memory
+      const removedIdx = state.userPalettes.findIndex((p) => Number(p.id) === Number(projectId));
+      if (removedIdx !== -1) {
+        state.userPalettes.splice(removedIdx, 1);
+        saveUserPalettesToStorage();
+
+        if (state.activeSlot === removedIdx) {
+          if (state.userPalettes.length > 0) {
+            state.activeSlot = 0;
+            state.currentColor = state.userPalettes[0].hex;
+          } else {
+            state.activeSlot = "default";
+            state.currentColor = state.defaultColor;
+          }
+          syncPickerFromColor(state.currentColor);
+        } else if (typeof state.activeSlot === "number" && state.activeSlot > removedIdx) {
+          state.activeSlot -= 1;
+        }
+        renderHarmonies();
+      } else {
         renderHeroSeed();
       }
-      state.projects = state.projects.filter((p) => Number(p.id) !== Number(projectId));
+
       renderProjectsList();
       showToast(res.message, "success");
     } else {
@@ -1103,7 +1418,7 @@ export function renderProjectsList() {
   container.innerHTML = "";
 
   state.projects.forEach((proj) => {
-    const isLoaded = state.loadedPalette && Number(state.loadedPalette.id) === Number(proj.id);
+    const isLoaded = state.userPalettes.some((p) => Number(p.id) === Number(proj.id));
     const item = document.createElement("div");
     item.className = `project-item flex-row items-center justify-between gap16 p12 br8 ${isLoaded ? "project-item-active" : ""}`;
 
@@ -1112,11 +1427,13 @@ export function renderProjectsList() {
         <div class="project-swatch-box br8" style="background-color: ${proj.hex_color}; width: 44px; height: 44px; flex-shrink: 0; box-shadow: 0 2px 8px ${proj.hex_color}66;"></div>
         <div class="flex-column" style="min-width: 0;">
           <div class="flex-row items-center gap8">
-            <span class="project-name bold600 text-white font-truncate">${escapeHtml(proj.project_name)}</span>
+            <span class="project-name-wrap">
+              <span class="project-name bold600 text-white font-truncate">${escapeHtml(proj.project_name)}</span>
+            </span>
             <button type="button" class="btn-icon-rename" title="Renombrar paleta" data-id="${proj.id}" aria-label="Renombrar">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
             </button>
-            ${isLoaded ? '<span class="badge-active font-mono text-xs" style="background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.4); padding: 1px 6px; border-radius: 4px; font-weight: 500;">Cargada</span>' : ''}
+            ${isLoaded ? '<span class="badge-active font-mono text-xs" style="background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.4); padding: 1px 6px; border-radius: 4px; font-weight: 500;">En panel</span>' : ''}
           </div>
           <span class="project-date font-mono text-xs text-inactive">${proj.created_at || ""}</span>
         </div>
@@ -1136,33 +1453,83 @@ export function renderProjectsList() {
 
     // Click "Cargar"
     item.querySelector(".btn-load-palette").addEventListener("click", () => {
-      state.loadedPalette = {
-        id: proj.id,
-        project_name: proj.project_name,
-        hex_color: proj.hex_color
-      };
-
-      const projectNameInput = document.getElementById("projectNameInput");
-      if (projectNameInput) {
-        projectNameInput.value = proj.project_name;
-        projectNameInput.dataset.auto = "false";
+      const existingIdx = state.userPalettes.findIndex((p) => Number(p.id) === Number(proj.id));
+      if (existingIdx !== -1) {
+        state.activeSlot = existingIdx;
+        state.currentColor = state.userPalettes[existingIdx].hex;
+        syncPickerFromColor(state.currentColor);
+        renderHarmonies();
+        renderProjectsList();
+        closeModal("projectsModal");
+        showToast(`Paleta activa: ${proj.project_name}`);
+        return;
       }
 
-      setSeedColor(proj.hex_color);
+      if (state.userPalettes.length >= MAX_USER_PALETTES) {
+        showToast("Límite alcanzado: solo puedes tener hasta 5 paletas activas en el panel (+ color base).", "warning");
+        return;
+      }
+
+      const loadedPal = {
+        id: proj.id,
+        name: proj.project_name,
+        hex: normalizeHex6(proj.hex_color) || proj.hex_color
+      };
+
+      state.userPalettes.push(loadedPal);
+      state.activeSlot = state.userPalettes.length - 1;
+      saveUserPalettesToStorage();
+
+      state.currentColor = loadedPal.hex;
+      syncPickerFromColor(state.currentColor);
+
       closeModal("projectsModal");
-      renderHeroSeed();
+      renderHarmonies();
       renderProjectsList();
-      showToast(`Paleta "${proj.project_name}" cargada como referencia.`);
+      showToast(`Paleta "${proj.project_name}" cargada al panel (${state.userPalettes.length}/5).`, "success");
     });
 
-    // Click rename button
+    // Click rename button -> inline edit without window.prompt or alert
     const renameBtn = item.querySelector(".btn-icon-rename");
     if (renameBtn) {
-      renameBtn.addEventListener("click", async () => {
-        const newName = window.prompt("Nuevo nombre para esta paleta:", proj.project_name);
-        if (newName && newName.trim() && newName.trim() !== proj.project_name) {
-          await renameProject(proj.id, newName.trim());
-        }
+      renameBtn.addEventListener("click", () => {
+        const nameContainer = item.querySelector(".project-name-wrap");
+        if (!nameContainer || nameContainer.querySelector(".rename-inline-input")) return;
+
+        const originalName = proj.project_name;
+        nameContainer.innerHTML = `
+          <input type="text" class="rename-inline-input" value="${escapeHtml(originalName)}" maxlength="40" />
+        `;
+        const input = nameContainer.querySelector(".rename-inline-input");
+        input.focus();
+        input.select();
+
+        let isSaved = false;
+        const commitRename = async () => {
+          if (isSaved) return;
+          isSaved = true;
+          const newVal = input.value.trim();
+          if (newVal && newVal !== originalName) {
+            await renameProject(proj.id, newVal);
+          } else {
+            renderProjectsList();
+          }
+        };
+
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commitRename();
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            isSaved = true;
+            renderProjectsList();
+          }
+        });
+
+        input.addEventListener("blur", () => {
+          commitRename();
+        });
       });
     }
 
@@ -1267,7 +1634,7 @@ export function openColorPicker(triggerEl) {
   pickerState.activeTrigger = triggerEl;
   pickerState.isOpen = true;
 
-  if (triggerEl.id === "heroColorSwatch" || triggerEl.id === "heroColorLabel") {
+  if (triggerEl.id === "heroColorSwatch" || triggerEl.id === "heroColorLabel" || triggerEl.id === "heroLoadedSwatch" || triggerEl.id === "heroLoadedLabel" || triggerEl.closest(".hero-seed-item")) {
     const heroContainer = document.querySelector(".hero-seed-container");
     if (heroContainer) {
       popover.style.top = "100%";
@@ -1394,7 +1761,7 @@ function initCustomPickerEvents() {
     const popover = document.getElementById("coloristiaPickerPopover");
     if (!popover || popover.style.display === "none") return;
     if (popover.contains(e.target)) return;
-    if (e.target.closest("#heroColorSwatch") || e.target.closest("#quickColorTrigger") || e.target.closest("#heroColorLabel")) return;
+    if (e.target.closest(".hero-seed-item") || e.target.closest("#quickColorTrigger")) return;
     closeColorPicker();
   });
 
@@ -1439,12 +1806,27 @@ export function initColoristia() {
     variationCountDisplay.textContent = state.variations;
   }
 
-  // Generate a random seed color on every page load / refresh
+  // Generate a random seed color on every page load / refresh for defaultColor
   const randH = Math.floor(Math.random() * 360);
   const randS = Math.floor(65 + Math.random() * 30);
   const randL = Math.floor(40 + Math.random() * 25);
   const initRgb = hslToRgb(randH, randS, randL);
-  state.currentColor = rgbToHex(initRgb.r, initRgb.g, initRgb.b);
+  const defaultHex = rgbToHex(initRgb.r, initRgb.g, initRgb.b);
+  state.defaultColor = defaultHex;
+  state.currentColor = defaultHex;
+
+  // Load user palettes from localStorage memory only if user has saved projects
+  loadUserPalettesFromStorage();
+  if (!state.projects || state.projects.length === 0) {
+    state.userPalettes = [];
+    saveUserPalettesToStorage();
+  } else {
+    // Only keep palettes that exist in user's saved projects
+    state.userPalettes = state.userPalettes.filter((p) =>
+      state.projects.some((proj) => Number(proj.id) === Number(p.id) || (proj.hex_color && p.hex && proj.hex_color.toUpperCase() === p.hex.toUpperCase()))
+    );
+    saveUserPalettesToStorage();
+  }
 
   // Initialize in-app custom color picker
   initCustomPickerEvents();
@@ -1468,103 +1850,134 @@ export function initColoristia() {
     incBtn.addEventListener("click", () => changeVariations(1));
   }
 
-  // In-app custom color picker triggers
+  // Quick color trigger
   const quickTrigger = document.getElementById("quickColorTrigger");
-  const heroSwatch = document.getElementById("heroColorSwatch");
-  const heroLabel = document.getElementById("heroColorLabel");
-
   if (quickTrigger) {
     quickTrigger.addEventListener("click", () => toggleColorPicker(quickTrigger));
   }
-  if (heroSwatch) {
-    heroSwatch.addEventListener("click", () => toggleColorPicker(heroSwatch));
-  }
-  if (heroLabel) {
-    heroLabel.addEventListener("click", () => toggleColorPicker(heroSwatch));
-  }
 
-  // Pin current color as reference button (+)
-  const pinBtn = document.getElementById("pinColorBtn");
-  if (pinBtn) {
-    pinBtn.addEventListener("click", () => {
-      state.loadedPalette = {
-        id: null,
-        project_name: "Paleta fijada",
-        hex_color: state.currentColor
-      };
-      renderHeroSeed();
-      showToast(`Color ${state.currentColor} fijado como referencia.`);
+  // --- Hero Seed Work Panel (Default Color + Up to 5 User Palettes) ---
+  const seedsTrack = document.getElementById("heroSeedsTrack");
+  if (seedsTrack) {
+    seedsTrack.addEventListener("click", (e) => {
+      // 1. Dismiss user palette from panel (X)
+      const dismissBtn = e.target.closest('[data-action="dismiss-user"]');
+      if (dismissBtn) {
+        e.stopPropagation();
+        const idx = Number(dismissBtn.dataset.index);
+        if (idx >= 0 && idx < state.userPalettes.length) {
+          closeColorPicker();
+          state.userPalettes.splice(idx, 1);
+          saveUserPalettesToStorage();
+          if (state.activeSlot === idx) {
+            if (state.userPalettes.length > 0) {
+              state.activeSlot = 0;
+              state.currentColor = state.userPalettes[0].hex;
+            } else {
+              state.activeSlot = "default";
+              state.currentColor = state.defaultColor;
+            }
+            syncPickerFromColor(state.currentColor);
+          } else if (typeof state.activeSlot === "number" && state.activeSlot > idx) {
+            state.activeSlot -= 1;
+          }
+          renderHarmonies();
+          renderProjectsList();
+          showToast("Paleta retirada del panel.", "info");
+        }
+        return;
+      }
+
+      // 2. Activate user palette via button or label
+      const activateUserBtn = e.target.closest('[data-action="activate-user"]');
+      if (activateUserBtn) {
+        e.stopPropagation();
+        const idx = Number(activateUserBtn.dataset.index);
+        if (idx >= 0 && idx < state.userPalettes.length) {
+          const pal = state.userPalettes[idx];
+          if (state.activeSlot !== idx) {
+            closeColorPicker();
+            state.activeSlot = idx;
+            state.currentColor = pal.hex;
+            syncPickerFromColor(state.currentColor);
+            renderHarmonies();
+            showToast(`Paleta activa: ${pal.name || pal.hex}`);
+          }
+        }
+        return;
+      }
+
+      // 3. Click on user palette circle
+      const circleUser = e.target.closest('[data-action="circle-user"]');
+      if (circleUser) {
+        e.stopPropagation();
+        const idx = Number(circleUser.dataset.index);
+        if (idx >= 0 && idx < state.userPalettes.length) {
+          const pal = state.userPalettes[idx];
+          if (state.activeSlot !== idx) {
+            closeColorPicker();
+            state.activeSlot = idx;
+            state.currentColor = pal.hex;
+            syncPickerFromColor(state.currentColor);
+            renderHarmonies();
+            showToast(`Paleta activa: ${pal.name || pal.hex}`);
+          } else {
+            toggleColorPicker(circleUser);
+          }
+        }
+        return;
+      }
+
+      // 4. Activate or click default color
+      const activateDefault = e.target.closest('[data-action="activate-default"]');
+      if (activateDefault) {
+        e.stopPropagation();
+        if (state.activeSlot !== "default") {
+          closeColorPicker();
+          state.activeSlot = "default";
+          state.currentColor = state.defaultColor;
+          syncPickerFromColor(state.currentColor);
+          renderHarmonies();
+          showToast(`Color base activo: ${state.defaultColor}`);
+        }
+        return;
+      }
+
+      const circleDefault = e.target.closest('[data-action="circle-default"]');
+      if (circleDefault) {
+        e.stopPropagation();
+        if (state.activeSlot !== "default") {
+          closeColorPicker();
+          state.activeSlot = "default";
+          state.currentColor = state.defaultColor;
+          syncPickerFromColor(state.currentColor);
+          renderHarmonies();
+          showToast(`Color base activo: ${state.defaultColor}`);
+        } else {
+          toggleColorPicker(circleDefault);
+        }
+        return;
+      }
     });
   }
 
-  // Clear reference colors button
+  // Clear all user palettes button (Borrar colores)
   const clearPinnedBtn = document.getElementById("clearPinnedBtn");
   if (clearPinnedBtn) {
     clearPinnedBtn.addEventListener("click", () => {
-      if (state.loadedPalette) {
-        state.loadedPalette = null;
-        renderHeroSeed();
-        renderProjectsList();
-        showToast("Colores de referencia borrados.", "info");
-      }
-    });
-  }
-
-  // Hero reference circle actions: apply loaded palette as working color
-  const goToLoadedPaletteBtn = document.getElementById("goToLoadedPaletteBtn");
-  const heroLoadedSwatch = document.getElementById("heroLoadedSwatch");
-  const applyLoadedAsWorking = () => {
-    if (state.loadedPalette && state.loadedPalette.hex_color) {
-      setSeedColor(state.loadedPalette.hex_color);
-      const projectNameInput = document.getElementById("projectNameInput");
-      if (projectNameInput && state.loadedPalette.project_name) {
-        projectNameInput.value = state.loadedPalette.project_name;
-        projectNameInput.dataset.auto = "false";
-      }
-      showToast(`Aplicado como color de trabajo: ${state.loadedPalette.hex_color}`);
-    }
-  };
-
-  if (goToLoadedPaletteBtn) {
-    goToLoadedPaletteBtn.addEventListener("click", applyLoadedAsWorking);
-  }
-  if (heroLoadedSwatch) {
-    heroLoadedSwatch.addEventListener("click", applyLoadedAsWorking);
-  }
-
-  // Hero reference circle actions: dismiss reference
-  const dismissLoadedPaletteBtn = document.getElementById("dismissLoadedPaletteBtn");
-  if (dismissLoadedPaletteBtn) {
-    dismissLoadedPaletteBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      state.loadedPalette = null;
-      renderHeroSeed();
+      closeColorPicker();
+      state.userPalettes = [];
+      state.activeSlot = "default";
+      saveUserPalettesToStorage();
+      state.currentColor = state.defaultColor;
+      syncPickerFromColor(state.currentColor);
+      renderHarmonies();
       renderProjectsList();
-      showToast("Paleta de referencia retirada.", "info");
+      showToast("Se han borrado las paletas del panel.", "info");
     });
   }
 
-  // Hero reference circle actions: edit name
-  const editLoadedPaletteNameBtn = document.getElementById("editLoadedPaletteNameBtn");
-  if (editLoadedPaletteNameBtn) {
-    editLoadedPaletteNameBtn.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      if (!state.loadedPalette) return;
-      const currentName = state.loadedPalette.project_name || "Paleta";
-      const newName = window.prompt("Editar nombre de la paleta:", currentName);
-      if (newName && newName.trim() && newName.trim() !== currentName) {
-        if (state.loadedPalette.id) {
-          await renameProject(state.loadedPalette.id, newName.trim());
-        } else {
-          state.loadedPalette.project_name = newName.trim();
-          renderHeroSeed();
-          showToast("Nombre actualizado.", "success");
-        }
-      }
-    });
-  }
-
-  // Random color button: generates a vibrant random color directly without confirmation
+  // Random color button: generates a vibrant random color for defaultColor directly without alerts
   const randomBtn = document.getElementById("randomColorBtn");
   if (randomBtn) {
     randomBtn.addEventListener("click", () => {
@@ -1711,12 +2124,14 @@ export function initColoristia() {
   }
 
   // Initial harmony rendering
-  renderHarmonies();
+  renderHarmonies({ isInitial: true });
 }
 
-// Auto-bootstrap on DOM ready
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initColoristia);
-} else {
-  initColoristia();
+// Auto-bootstrap on DOM ready in browser environment
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initColoristia);
+  } else {
+    initColoristia();
+  }
 }
