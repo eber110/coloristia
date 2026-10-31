@@ -1113,11 +1113,8 @@ export function renderHarmonies(options = {}) {
       column.className = `harmony-column flex-column gap12 ${isColumnDisabled ? "harmony-column-disabled" : ""} ${!isDesktopVisible ? "desktop-hidden" : ""} ${isMobileVisible ? "is-mobile-visible" : ""}`;
       column.dataset.harmonyKey = key;
 
-      const header = document.createElement("div");
-      header.className = "harmony-col-header flex-row items-center justify-between gap8 w100";
-
       const title = document.createElement("h3");
-      title.className = "harmony-title";
+      title.className = "harmony-title text-center";
       if (isColumnDisabled) {
         title.innerHTML = `${item.rule.name} <span class="badge-disabled">(Desactivada)</span>`;
       } else if (isPureBlackOrWhite && key === "monochromatic") {
@@ -1125,31 +1122,7 @@ export function renderHarmonies(options = {}) {
       } else {
         title.textContent = item.rule.name;
       }
-      header.appendChild(title);
-
-      const exportBtn = document.createElement("button");
-      exportBtn.type = "button";
-      exportBtn.className = "btn-col-export";
-      exportBtn.dataset.harmonyKey = key;
-      exportBtn.title = `Exportar paleta ${item.rule.name}`;
-      exportBtn.setAttribute("aria-label", `Exportar paleta ${item.rule.name}`);
-      exportBtn.innerHTML = `
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="16 18 22 12 16 6"></polyline>
-          <polyline points="8 6 2 12 8 18"></polyline>
-        </svg>
-        <span>Exportar</span>
-      `;
-      if (isColumnDisabled) {
-        exportBtn.disabled = true;
-      }
-      exportBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        openExportModalForHarmony(key);
-      });
-      header.appendChild(exportBtn);
-
-      column.appendChild(header);
+      column.appendChild(title);
 
       const cardsContainer = document.createElement("div");
       cardsContainer.className = "cards-stack flex-column gap8 w100";
@@ -1181,8 +1154,20 @@ export function renderHarmonies(options = {}) {
       column.classList.toggle("desktop-hidden", !isDesktopVisible);
       column.classList.toggle("is-mobile-visible", isMobileVisible);
 
+      // Clean up any col-header if present from previous DOM state
+      const oldHeader = column.querySelector(".harmony-col-header");
+      if (oldHeader) {
+        const oldTitle = oldHeader.querySelector(".harmony-title");
+        if (oldTitle) {
+          oldTitle.className = "harmony-title text-center";
+          column.prepend(oldTitle);
+        }
+        oldHeader.remove();
+      }
+
       const title = column.querySelector(".harmony-title");
       if (title) {
+        title.className = "harmony-title text-center";
         if (isColumnDisabled) {
           title.innerHTML = `${item.rule.name} <span class="badge-disabled">(Desactivada)</span>`;
         } else if (isPureBlackOrWhite && key === "monochromatic") {
@@ -1190,11 +1175,6 @@ export function renderHarmonies(options = {}) {
         } else {
           title.textContent = item.rule.name;
         }
-      }
-
-      const exportBtn = column.querySelector(".btn-col-export");
-      if (exportBtn) {
-        exportBtn.disabled = isColumnDisabled;
       }
 
       const cardsContainer = column.querySelector(".cards-stack");
@@ -1745,83 +1725,259 @@ export function renderProjectsList() {
 }
 
 /**
- * Genera y muestra el código de exportación de la paleta activa en CSS, Tailwind o JSON.
+ * Abre el modal de exportación para una armonía específica o para todas.
+ *
+ * @param {string} [harmonyKey='all'] 'all' para exportar todas o ID de la armonía (ej. 'monochromatic').
+ */
+export function openExportModalForHarmony(harmonyKey = "all") {
+  state.exportTarget = harmonyKey;
+  const scopeSelect = document.getElementById("exportScopeSelect");
+  if (scopeSelect) {
+    scopeSelect.value = harmonyKey;
+  }
+  openModal("exportModal");
+  renderExportCode();
+}
+
+/**
+ * Genera y muestra el código de exportación de la paleta en CSS, Tailwind o JSON.
+ * Respeta el formato seleccionado, el alcance (todas las paletas o una específica),
+ * el parámetro de variaciones y el sistema de color (HEX, RGB, HSL, HSV, CMYK).
  *
  * @param {string|null} [format] Formato a renderizar: 'css' | 'tailwind' | 'json'.
+ * @param {string|null} [target] Alcance a exportar: 'all' | '<harmonyKey>'.
  */
-export function renderExportCode(format = null) {
+export function renderExportCode(format = null, target = null) {
   if (format) {
     state.exportFormat = format;
   }
+  if (target !== null && target !== undefined) {
+    state.exportTarget = target;
+  }
   const currentFormat = state.exportFormat || "css";
+  const currentTarget = state.exportTarget || "all";
 
   // Actualizar clases activas en los botones de pestañas
   document.querySelectorAll(".export-tab-btn").forEach((btn) => {
     btn.classList.toggle("is-active", btn.dataset.exportFormat === currentFormat);
   });
 
+  // Sincronizar selector de alcance en el modal
+  const scopeSelect = document.getElementById("exportScopeSelect");
+  if (scopeSelect && scopeSelect.value !== currentTarget) {
+    scopeSelect.value = currentTarget;
+  }
+
   const labelEl = document.getElementById("exportFormatLabel");
   const previewEl = document.getElementById("exportCodePreview");
+  const modalTitleEl = document.getElementById("exportModalTitle");
   if (!previewEl) return;
 
   const data = generateAllHarmonies(state.currentColor, state.variations, "family");
-  const baseHex = data.seed.hex;
-  const primaryColors = data.harmonies.monochromatic?.colors || [];
+  const seedColorObj = {
+    r: data.seed.rgb.r,
+    g: data.seed.rgb.g,
+    b: data.seed.rgb.b,
+    h: data.seed.hsl.h,
+    s: data.seed.hsl.s,
+    l: data.seed.hsl.l,
+    hex: data.seed.hex
+  };
+  const baseFormatted = formatColorValue(seedColorObj, state.colorSystem);
+  const isAll = currentTarget === "all";
 
+  // Determinar armonía objetivo si es individual
+  const singleHarmony = !isAll ? (data.harmonies[currentTarget] || data.harmonies.monochromatic) : null;
+  const harmonyDisplayName = isAll ? "Todas las Armonías (12)" : (singleHarmony?.rule?.name || "Armonía");
+
+  // Actualizar título del modal
+  if (modalTitleEl) {
+    modalTitleEl.textContent = isAll
+      ? "Exportar Todas las Armonías"
+      : `Exportar Armonía: ${harmonyDisplayName}`;
+  }
+
+  const sysUpper = state.colorSystem.toUpperCase();
   let codeOutput = "";
 
   if (currentFormat === "css") {
-    if (labelEl) labelEl.textContent = "Formato: CSS Custom Properties (:root)";
-    const lines = [
-      "/* ==================================================",
-      ` * Paleta generada en Coloristia (Base: ${baseHex})`,
-      " * ================================================== */",
-      ":root {",
-      `  --color-primary: ${baseHex};`
-    ];
-    primaryColors.forEach((c, i) => {
-      lines.push(`  --color-step-${i + 1}: ${c.hex};`);
-    });
-    lines.push("}");
-    codeOutput = lines.join("\n");
-  } else if (currentFormat === "tailwind") {
-    if (labelEl) labelEl.textContent = "Formato: Tailwind CSS Config (tailwind.config.js)";
-    const shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
-    const stepCount = Math.min(primaryColors.length, shades.length);
-    const shadeLines = [];
-    for (let i = 0; i < stepCount; i++) {
-      shadeLines.push(`        ${shades[i]}: '${primaryColors[i].hex}',`);
+    if (labelEl) {
+      labelEl.textContent = `Formato: CSS (:root) | ${harmonyDisplayName} | Sistema: ${sysUpper} | Variaciones: ${state.variations}`;
     }
-    codeOutput = [
-      "// tailwind.config.js",
-      "module.exports = {",
-      "  theme: {",
-      "    extend: {",
-      "      colors: {",
-      "        brand: {",
-      `          DEFAULT: '${baseHex}',`,
-      ...shadeLines,
-      "        },",
-      "      },",
-      "    },",
-      "  },",
-      "};"
-    ].join("\n");
-  } else if (currentFormat === "json") {
-    if (labelEl) labelEl.textContent = "Formato: Design Tokens (JSON)";
-    const jsonPalette = {
-      paletteName: `Coloristia ${baseHex}`,
-      baseColor: baseHex,
-      variations: state.variations,
-      tokens: primaryColors.map((c, i) => ({
-        step: i + 1,
-        hex: c.hex,
-        rgb: `rgb(${c.r}, ${c.g}, ${c.b})`,
-        wcagText: c.textColor,
-        contrast: getWcagContrast(c.r, c.g, c.b, c.textColor)
-      }))
+
+    if (isAll) {
+      const lines = [
+        "/* ==================================================",
+        ` * Paletas generadas en Coloristia (Todas las armonías)`,
+        ` * Color Base: ${baseFormatted} (${data.seed.hex})`,
+        ` * Variaciones: ${state.variations} | Sistema: ${sysUpper}`,
+        " * ================================================== */",
+        ":root {",
+        `  --color-base: ${baseFormatted};`,
+        ""
+      ];
+
+      for (const [key, item] of Object.entries(data.harmonies)) {
+        lines.push(`  /* ${item.rule.name} */`);
+        item.colors.forEach((c, i) => {
+          const val = formatColorValue(c, state.colorSystem);
+          lines.push(`  --${key}-${i + 1}: ${val};`);
+        });
+        lines.push("");
+      }
+
+      lines.push("}");
+      codeOutput = lines.join("\n");
+    } else {
+      const lines = [
+        "/* ==================================================",
+        ` * Paleta generada en Coloristia`,
+        ` * Armonía: ${singleHarmony.rule.name}`,
+        ` * Color Base: ${baseFormatted} (${data.seed.hex})`,
+        ` * Variaciones: ${state.variations} | Sistema: ${sysUpper}`,
+        " * ================================================== */",
+        ":root {",
+        `  --color-base: ${baseFormatted};`,
+        ""
+      ];
+
+      lines.push(`  /* ${singleHarmony.rule.name} (${singleHarmony.colors.length} variaciones) */`);
+      singleHarmony.colors.forEach((c, i) => {
+        const val = formatColorValue(c, state.colorSystem);
+        lines.push(`  --color-step-${i + 1}: ${val};`);
+      });
+      lines.push("}");
+      codeOutput = lines.join("\n");
+    }
+  } else if (currentFormat === "tailwind") {
+    if (labelEl) {
+      labelEl.textContent = `Formato: Tailwind Config | ${harmonyDisplayName} | Sistema: ${sysUpper} | Variaciones: ${state.variations}`;
+    }
+
+    const standardShades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+    const getShade = (i, total) => {
+      if (total <= standardShades.length) {
+        return standardShades[i];
+      }
+      return (i + 1) * 50;
     };
-    codeOutput = JSON.stringify(jsonPalette, null, 2);
+
+    if (isAll) {
+      const harmonyBlocks = [];
+      for (const [key, item] of Object.entries(data.harmonies)) {
+        const shadeLines = [];
+        item.colors.forEach((c, i) => {
+          const val = formatColorValue(c, state.colorSystem);
+          shadeLines.push(`          ${getShade(i, item.colors.length)}: '${val}',`);
+        });
+
+        harmonyBlocks.push([
+          `        ${key}: {`,
+          `          DEFAULT: '${baseFormatted}',`,
+          ...shadeLines,
+          "        },"
+        ].join("\n"));
+      }
+
+      codeOutput = [
+        "// tailwind.config.js",
+        `// Generado en Coloristia (Todas las armonías, Base: ${baseFormatted})`,
+        "module.exports = {",
+        "  theme: {",
+        "    extend: {",
+        "      colors: {",
+        `        base: '${baseFormatted}',`,
+        harmonyBlocks.join("\n"),
+        "      },",
+        "    },",
+        "  },",
+        "};"
+      ].join("\n");
+    } else {
+      const shadeLines = [];
+      singleHarmony.colors.forEach((c, i) => {
+        const val = formatColorValue(c, state.colorSystem);
+        shadeLines.push(`          ${getShade(i, singleHarmony.colors.length)}: '${val}',`);
+      });
+
+      codeOutput = [
+        "// tailwind.config.js",
+        `// Generado en Coloristia (Armonía: ${singleHarmony.rule.name}, Base: ${baseFormatted})`,
+        "module.exports = {",
+        "  theme: {",
+        "    extend: {",
+        "      colors: {",
+        "        brand: {",
+        `          DEFAULT: '${baseFormatted}',`,
+        ...shadeLines,
+        "        },",
+        "      },",
+        "    },",
+        "  },",
+        "};"
+      ].join("\n");
+    }
+  } else if (currentFormat === "json") {
+    if (labelEl) {
+      labelEl.textContent = `Formato: JSON Tokens | ${harmonyDisplayName} | Sistema: ${sysUpper} | Variaciones: ${state.variations}`;
+    }
+
+    if (isAll) {
+      const jsonAll = {
+        generator: "Coloristia",
+        paletteName: `Coloristia - Todas las Armonías (${baseFormatted})`,
+        baseColor: baseFormatted,
+        baseHex: data.seed.hex,
+        colorSystem: state.colorSystem,
+        variations: state.variations,
+        totalHarmonies: Object.keys(data.harmonies).length,
+        harmonies: {}
+      };
+
+      for (const [key, item] of Object.entries(data.harmonies)) {
+        jsonAll.harmonies[key] = {
+          id: key,
+          name: item.rule.name,
+          description: item.rule.description,
+          colors: item.colors.map((c, i) => ({
+            step: i + 1,
+            value: formatColorValue(c, state.colorSystem),
+            hex: c.hex,
+            rgb: `rgb(${c.r}, ${c.g}, ${c.b})`,
+            hsl: `hsl(${Math.round(c.h)}, ${Math.round(c.s)}%, ${Math.round(c.l)}%)`,
+            textColor: c.textColor,
+            contrast: getWcagContrast(c.r, c.g, c.b, c.textColor)
+          }))
+        };
+      }
+
+      codeOutput = JSON.stringify(jsonAll, null, 2);
+    } else {
+      const jsonSingle = {
+        generator: "Coloristia",
+        paletteName: `Coloristia - ${singleHarmony.rule.name} (${baseFormatted})`,
+        baseColor: baseFormatted,
+        baseHex: data.seed.hex,
+        colorSystem: state.colorSystem,
+        variations: state.variations,
+        harmony: {
+          id: currentTarget,
+          name: singleHarmony.rule.name,
+          description: singleHarmony.rule.description
+        },
+        colors: singleHarmony.colors.map((c, i) => ({
+          step: i + 1,
+          value: formatColorValue(c, state.colorSystem),
+          hex: c.hex,
+          rgb: `rgb(${c.r}, ${c.g}, ${c.b})`,
+          hsl: `hsl(${Math.round(c.h)}, ${Math.round(c.s)}%, ${Math.round(c.l)}%)`,
+          textColor: c.textColor,
+          contrast: getWcagContrast(c.r, c.g, c.b, c.textColor)
+        }))
+      };
+
+      codeOutput = JSON.stringify(jsonSingle, null, 2);
+    }
   }
 
   previewEl.textContent = codeOutput;
@@ -2289,12 +2445,19 @@ export function initColoristia() {
     }
   });
 
-  // Export palette modal triggers
+  // Export palette modal triggers (Top bar - all harmonies)
   const openExportBtn = document.getElementById("openExportModalBtn");
   if (openExportBtn) {
     openExportBtn.addEventListener("click", () => {
-      renderExportCode();
-      openModal("exportModal");
+      openExportModalForHarmony("all");
+    });
+  }
+
+  // Export scope dropdown inside modal
+  const exportScopeSelect = document.getElementById("exportScopeSelect");
+  if (exportScopeSelect) {
+    exportScopeSelect.addEventListener("change", (e) => {
+      renderExportCode(null, e.target.value);
     });
   }
 

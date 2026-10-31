@@ -525,29 +525,6 @@ body {
   gap: 12px;
 }
 
-.harmony-col-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  margin-bottom: 2px;
-}
-
-.harmony-col-header .harmony-title {
-  margin: 0;
-  text-align: left;
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #ffffff;
-  letter-spacing: -0.01em;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .harmony-title {
   font-size: 0.95rem;
   font-weight: 700;
@@ -555,38 +532,6 @@ body {
   margin: 0 0 10px 0;
   text-align: center;
   letter-spacing: -0.01em;
-}
-
-.btn-col-export {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--color-text-muted);
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.btn-col-export:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.28);
-  color: #ffffff;
-}
-
-.btn-col-export:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.btn-col-export svg {
-  flex-shrink: 0;
 }
 
 .cards-stack {
