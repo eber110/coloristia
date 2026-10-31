@@ -14,3 +14,7 @@
 *.sqlite-wal
 *.sqlite-shm
 .vscode/
+
+# Reglas esenciales del framework (sincronizadas por InitAppStructure)
+/Cache/
+/Logs/

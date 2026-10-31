@@ -1,6 +1,6 @@
 {
-    "generated_at": "2026-10-30 20:08:53",
-    "total_routes": 1,
+    "generated_at": "2026-10-31 16:27:54",
+    "total_routes": 10,
     "static_routes": [
         {
             "method": "GET",
@@ -8,12 +8,96 @@
             "has_variables": false,
             "variables": [],
             "protect_at_controller": false,
-            "action": "Closure",
+            "action": "App\\Controllers\\HomeControllers@home",
+            "middlewares": [
+                "App\\Middleware\\VisitMiddleware"
+            ]
+        },
+        {
+            "method": "POST",
+            "uri": "/autenticacion/ingresar",
+            "has_variables": false,
+            "variables": [],
+            "protect_at_controller": false,
+            "action": "App\\Controllers\\AuthControllers@login",
+            "middlewares": []
+        },
+        {
+            "method": "POST",
+            "uri": "/autenticacion/registro",
+            "has_variables": false,
+            "variables": [],
+            "protect_at_controller": false,
+            "action": "App\\Controllers\\AuthControllers@register",
+            "middlewares": []
+        },
+        {
+            "method": "POST",
+            "uri": "/autenticacion/salir",
+            "has_variables": false,
+            "variables": [],
+            "protect_at_controller": false,
+            "action": "App\\Controllers\\AuthControllers@logout",
+            "middlewares": []
+        },
+        {
+            "method": "GET",
+            "uri": "/autenticacion/salir",
+            "has_variables": false,
+            "variables": [],
+            "protect_at_controller": false,
+            "action": "App\\Controllers\\AuthControllers@logout",
+            "middlewares": []
+        },
+        {
+            "method": "POST",
+            "uri": "/usuario/sistema-color",
+            "has_variables": false,
+            "variables": [],
+            "protect_at_controller": false,
+            "action": "App\\Controllers\\AuthControllers@updateColorSystem",
+            "middlewares": []
+        },
+        {
+            "method": "POST",
+            "uri": "/proyectos/guardar",
+            "has_variables": false,
+            "variables": [],
+            "protect_at_controller": false,
+            "action": "App\\Controllers\\ProjectControllers@save",
+            "middlewares": []
+        },
+        {
+            "method": "GET",
+            "uri": "/proyectos/listar",
+            "has_variables": false,
+            "variables": [],
+            "protect_at_controller": false,
+            "action": "App\\Controllers\\ProjectControllers@list",
+            "middlewares": []
+        },
+        {
+            "method": "POST",
+            "uri": "/proyectos/renombrar",
+            "has_variables": false,
+            "variables": [],
+            "protect_at_controller": false,
+            "action": "App\\Controllers\\ProjectControllers@rename",
+            "middlewares": []
+        },
+        {
+            "method": "POST",
+            "uri": "/proyectos/eliminar",
+            "has_variables": false,
+            "variables": [],
+            "protect_at_controller": false,
+            "action": "App\\Controllers\\ProjectControllers@delete",
             "middlewares": []
         }
     ],
     "dynamic_routes": [],
     "summary_by_method": {
-        "GET": 1
+        "GET": 3,
+        "POST": 7
     }
 }
