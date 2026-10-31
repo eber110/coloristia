@@ -4,9 +4,11 @@ namespace App\Controllers;
 
 use Base\Control\Control;
 use Base\Module\AuthModule;
+use Base\Module\CookieModule;
 use Base\Module\ResponseModule;
 use Base\Module\SecurityModule;
 use Base\Module\Session;
+use Base\Module\TokenModule;
 use App\Models\UserModels;
 use App\Models\LogModels;
 
@@ -57,15 +59,23 @@ class AuthControllers extends Control
     $dbUser = UserModels::findById($userId);
     $colorSystem = $dbUser["color_system"] ?? "hex";
 
-    if (isset($_SESSION["user"])) {
+    if ($dbUser) {
+      // Registrar sesión persistente con JWT firmado con la semilla SEED
+      Session::create_user_session($dbUser);
+    } elseif (isset($_SESSION["user"])) {
       $_SESSION["user"]["color_system"] = $colorSystem;
     }
+
+    $jwtToken = (class_exists(TokenModule::class) && $dbUser)
+      ? TokenModule::configJWT($dbUser)
+      : null;
 
     LogModels::record("info", "auth.login", "User successfully authenticated: {$user['username']}", null, $userId);
 
     ResponseModule::json([
       "status"       => "success",
       "message"      => "¡Bienvenido de vuelta, " . ($user["username"] ?? "") . "!",
+      "token"        => $jwtToken,
       "user"         => [
         "id"           => $userId,
         "username"     => $user["username"] ?? "",
@@ -154,14 +164,23 @@ class AuthControllers extends Control
       ], 500);
     }
 
-    // Automatically log in the registered user
+    // Iniciar sesión automáticamente y firmar JWT persistente
     AuthModule::loginUsingId($userId);
+    $registeredUser = UserModels::findById($userId);
+    if ($registeredUser) {
+      Session::create_user_session($registeredUser);
+    }
+
+    $jwtToken = (class_exists(TokenModule::class) && $registeredUser)
+      ? TokenModule::configJWT($registeredUser)
+      : null;
 
     LogModels::record("info", "auth.register", "New user registered: {$username}", null, (int)$userId);
 
     ResponseModule::json([
       "status"       => "success",
       "message"      => "¡Cuenta creada exitosamente! Bienvenido, {$username}.",
+      "token"        => $jwtToken,
       "user"         => [
         "id"           => (int)$userId,
         "username"     => $username,
@@ -185,6 +204,11 @@ class AuthControllers extends Control
       $userId = AuthModule::id();
       LogModels::record("info", "auth.logout", "User logged out", null, $userId);
       AuthModule::logout();
+    }
+
+    Session::session_end_all();
+    if (class_exists(CookieModule::class)) {
+      CookieModule::delete("auth_token");
     }
 
     $isAjax = (!empty($_SERVER["HTTP_X_REQUESTED_WITH"]) && strtolower($_SERVER["HTTP_X_REQUESTED_WITH"]) === "xmlhttprequest")

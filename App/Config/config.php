@@ -27,3 +27,30 @@ if (file_exists($basePath . '/vendor/eber/framework/config.php')) {
 } elseif (file_exists($basePath . '/config.php')) {
     require_once $basePath . '/config.php';
 }
+
+// ==================== ASSET VERSIONING & CACHE BUSTING ====================
+if (!defined('ASSET_VERSION')) {
+    $envVersion = $_ENV['ASSET_VERSION'] ?? $_ENV['APP_VERSION'] ?? 'auto';
+    if ($envVersion === 'auto' || empty($envVersion)) {
+        // Cálculo automático basado en la última fecha de modificación de los estilos
+        $cssBase = $basePath . '/App/Public/Css/';
+        $minCssFile = $basePath . '/App/Public/Min/Css/css.min.css';
+        $maxMtime = file_exists($minCssFile) ? (int)filemtime($minCssFile) : 1;
+
+        if (is_dir($cssBase)) {
+            $cssFiles = @scandir($cssBase) ?: [];
+            foreach ($cssFiles as $f) {
+                if (str_ends_with($f, '.css')) {
+                    $mtime = (int)@filemtime($cssBase . $f);
+                    if ($mtime > $maxMtime) {
+                        $maxMtime = $mtime;
+                    }
+                }
+            }
+        }
+        define('ASSET_VERSION', (string)$maxMtime);
+    } else {
+        define('ASSET_VERSION', (string)$envVersion);
+    }
+}
+
