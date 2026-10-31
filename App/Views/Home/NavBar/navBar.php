@@ -7,7 +7,10 @@
  */
 ?>
 <header class="coloristia-nav flex-row items-center justify-between">
-  <div class="flex-row items-center gap10">
+  <div class="flex-row center-center gap10">
+    <figure class="hpx30">
+      <img src="<?= LOGOPAG?>" alt="" class="cover">
+    </figure>
     <span class="brand-title">Coloristia</span>
   </div>
 
