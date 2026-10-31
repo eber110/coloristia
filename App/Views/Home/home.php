@@ -18,6 +18,9 @@
 </script>
 
 <div class="coloristia-wrapper">
+  <div class="ambient-glow ambient-glow-primary" id="ambientGlow1" aria-hidden="true"></div>
+  <div class="ambient-glow ambient-glow-secondary" id="ambientGlow2" aria-hidden="true"></div>
+  <div class="ambient-glow ambient-glow-tertiary" id="ambientGlow3" aria-hidden="true"></div>
   <div class="coloristia-container">
     <?php
       _part("Home.navBar", ["user" => $user, "isLoggedIn" => $isLoggedIn]);

@@ -48,12 +48,12 @@
 
         <div class="flex-column gap6">
           <label for="loginIdentifier" class="text-xs text-muted font-medium">Usuario o Correo Electrónico</label>
-          <input type="text" id="loginIdentifier" name="identifier" class="input-control w100" required placeholder="tu_usuario o correo@ejemplo.com">
+          <input type="text" id="loginIdentifier" name="identifier" class="input-control w100" required placeholder="tu_usuario o correo@ejemplo.com" autocomplete="username">
         </div>
 
         <div class="flex-column gap6">
           <label for="loginPassword" class="text-xs text-muted font-medium">Contraseña</label>
-          <input type="password" id="loginPassword" name="password" class="input-control w100" required placeholder="••••••••">
+          <input type="password" id="loginPassword" name="password" class="input-control w100" required placeholder="••••••••" autocomplete="current-password">
         </div>
 
         <button type="submit" class="btn-primary w100" style="padding: 11px;">Entrar a Coloristia</button>
@@ -83,17 +83,17 @@
 
         <div class="flex-column gap6">
           <label for="registerUsername" class="text-xs text-muted font-medium">Nombre de Usuario</label>
-          <input type="text" id="registerUsername" name="username" class="input-control w100" required placeholder="ej: eber_color" minlength="3">
+          <input type="text" id="registerUsername" name="username" class="input-control w100" required placeholder="ej: eber_color" minlength="3" autocomplete="username">
         </div>
 
         <div class="flex-column gap6">
           <label for="registerEmail" class="text-xs text-muted font-medium">Correo Electrónico</label>
-          <input type="email" id="registerEmail" name="email" class="input-control w100" required placeholder="tu_correo@ejemplo.com">
+          <input type="email" id="registerEmail" name="email" class="input-control w100" required placeholder="tu_correo@ejemplo.com" autocomplete="email">
         </div>
 
         <div class="flex-column gap6">
           <label for="registerPassword" class="text-xs text-muted font-medium">Contraseña</label>
-          <input type="password" id="registerPassword" name="password" class="input-control w100" required placeholder="Mínimo 6 caracteres" minlength="6">
+          <input type="password" id="registerPassword" name="password" class="input-control w100" required placeholder="Mínimo 6 caracteres" minlength="6" autocomplete="new-password">
         </div>
 
         <div class="flex-column gap6">
@@ -116,6 +116,40 @@
           </button>
         </p>
       </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EXPORT CODE -->
+<div id="exportModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
+  <div class="modal-backdrop" data-close-modal="exportModal"></div>
+  <button type="button" class="modal-overlay-close" data-close-modal="exportModal" aria-label="Cerrar">&times;</button>
+  <div class="modal-card modal-card-export">
+    <div class="modal-card-head">
+      <h3 id="exportModalTitle" class="modal-card-title bold600">Exportar Paleta de Color</h3>
+      <button type="button" class="modal-close-btn" data-close-modal="exportModal" aria-label="Cerrar">&times;</button>
+    </div>
+    <div class="modal-card-body">
+      <div class="export-tabs">
+        <button type="button" class="export-tab-btn is-active" data-export-format="css">CSS Variables</button>
+        <button type="button" class="export-tab-btn" data-export-format="tailwind">Tailwind Config</button>
+        <button type="button" class="export-tab-btn" data-export-format="json">JSON Tokens</button>
+      </div>
+
+      <div class="code-preview-container">
+        <pre class="code-preview-pre"><code id="exportCodePreview">/* Generando código... */</code></pre>
+      </div>
+
+      <div class="flex-row justify-between items-center mt16 flex-wrap gap10">
+        <span id="exportFormatLabel" class="text-xs text-muted font-mono">Formato: CSS Custom Properties (:root)</span>
+        <button type="button" id="copyExportCodeBtn" class="btn-primary copy-code-btn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span id="copyExportCodeBtnText">Copiar Código</span>
+        </button>
+      </div>
     </div>
   </div>
 </div>

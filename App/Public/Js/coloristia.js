@@ -399,6 +399,55 @@ export function getAccessibleTextColor(r, g, b) {
 }
 
 /**
+ * Calculates WCAG contrast ratio against text color.
+ *
+ * @param {number} r
+ * @param {number} g
+ * @param {number} b
+ * @param {string} textColor "#18181B" or "#FFFFFF"
+ * @returns {{ratio: number, level: string}}
+ */
+export function getWcagContrast(r, g, b, textColor) {
+  const isDarkText = textColor === "#18181B";
+  const bgLum = getRelativeLuminance(r, g, b);
+  const textLum = isDarkText ? getRelativeLuminance(24, 24, 27) : 1.0;
+  const L1 = Math.max(bgLum, textLum);
+  const L2 = Math.min(bgLum, textLum);
+  const ratio = (L1 + 0.05) / (L2 + 0.05);
+  const rounded = Math.round(ratio * 10) / 10;
+  const level = rounded >= 7 ? "AAA" : (rounded >= 4.5 ? "AA" : (rounded >= 3 ? "AA+" : "A"));
+  return { ratio: rounded, level: level };
+}
+
+/**
+ * Updates dynamic ambient mesh glow colors based on current seed color.
+ *
+ * @param {string} hex
+ */
+export function updateAmbientLighting(hex) {
+  try {
+    if (typeof document === "undefined") return;
+    const rgb = hexToRgb(hex);
+    if (!rgb) return;
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+
+    // Complementary color for secondary ambient glow
+    const compHue = (hsl.h + 160) % 360;
+    const compRgb = hslToRgb(compHue, Math.min(hsl.s, 72), Math.max(hsl.l, 40));
+    const compHex = rgbToHex(compRgb.r, compRgb.g, compRgb.b);
+
+    // Warm/cool analog tone for tertiary ambient glow (desktop depth)
+    const tertHue = (hsl.h + 50) % 360;
+    const tertRgb = hslToRgb(tertHue, Math.min(hsl.s, 65), Math.max(hsl.l, 38));
+    const tertHex = rgbToHex(tertRgb.r, tertRgb.g, tertRgb.b);
+
+    document.documentElement.style.setProperty("--ambient-primary", hex);
+    document.documentElement.style.setProperty("--ambient-secondary", compHex);
+    document.documentElement.style.setProperty("--ambient-tertiary", tertHex);
+  } catch (_) {}
+}
+
+/**
  * Formats a color object according to the selected color system.
  *
  * @param {Object} color Color object with h, s, l, r, g, b, hex fields.
@@ -609,6 +658,7 @@ const state = {
   projects: [],
   selectedHarmonyFilter: "primary",
   isInitialRender: true,
+  exportFormat: "css",
   get loadedPalette() {
     return this.userPalettes.length > 0 ? {
       id: this.userPalettes[0].id,
@@ -938,15 +988,24 @@ function createColorCard(colorObj, isColumnDisabled, index, animMode = null) {
   }
 
   const formatted = formatColorValue(colorObj, state.colorSystem);
+  const wcag = getWcagContrast(colorObj.r, colorObj.g, colorObj.b, colorObj.textColor);
   card.dataset.formattedColor = formatted;
   card.innerHTML = `
     <span class="color-value font-mono">${formatted}</span>
     <span class="copy-hint">${isColumnDisabled ? "Inactiva" : "Copiar"}</span>
+    <span class="card-wcag-badge" title="Ratio WCAG: ${wcag.ratio}:1 (${wcag.level})">${wcag.level}</span>
   `;
 
   card.addEventListener("click", () => {
     if (card.disabled || card.getAttribute("aria-disabled") === "true") return;
+    const copyHint = card.querySelector(".copy-hint");
+    card.classList.add("is-copied");
+    if (copyHint) copyHint.textContent = "✓ Copiado";
     copyToClipboard(card.dataset.formattedColor || formatted);
+    setTimeout(() => {
+      card.classList.remove("is-copied");
+      if (copyHint) copyHint.textContent = isColumnDisabled ? "Inactiva" : "Copiar";
+    }, 1100);
   });
 
   return card;
@@ -962,6 +1021,14 @@ function createColorCard(colorObj, isColumnDisabled, index, animMode = null) {
  */
 export function renderHarmonies(options = {}) {
   const data = generateAllHarmonies(state.currentColor, state.variations, "family");
+
+  // Update dynamic ambient background lighting
+  updateAmbientLighting(state.currentColor);
+
+  // Update export preview if open
+  if (document.getElementById("exportModal")?.classList.contains("is-active")) {
+    renderExportCode();
+  }
 
   // Update hero swatches and labels
   renderHeroSeed({ skipTrackRebuild: !!options.skipHeroRebuild });
@@ -1105,6 +1172,16 @@ export function renderHarmonies(options = {}) {
           if (valEl) valEl.textContent = formatted;
           const hintEl = card.querySelector(".copy-hint");
           if (hintEl) hintEl.textContent = isColumnDisabled ? "Inactiva" : "Copiar";
+
+          const wcag = getWcagContrast(colorObj.r, colorObj.g, colorObj.b, colorObj.textColor);
+          let wcagEl = card.querySelector(".card-wcag-badge");
+          if (!wcagEl) {
+            wcagEl = document.createElement("span");
+            wcagEl.className = "card-wcag-badge";
+            card.appendChild(wcagEl);
+          }
+          wcagEl.textContent = wcag.level;
+          wcagEl.title = `Ratio WCAG: ${wcag.ratio}:1 (${wcag.level})`;
         } else {
           // Newly added variation (e.g. clicked +)
           // ONLY this card gets the entrance animation!
@@ -1540,6 +1617,89 @@ export function renderProjectsList() {
 
     container.appendChild(item);
   });
+}
+
+/**
+ * Genera y muestra el código de exportación de la paleta activa en CSS, Tailwind o JSON.
+ *
+ * @param {string|null} [format] Formato a renderizar: 'css' | 'tailwind' | 'json'.
+ */
+export function renderExportCode(format = null) {
+  if (format) {
+    state.exportFormat = format;
+  }
+  const currentFormat = state.exportFormat || "css";
+
+  // Actualizar clases activas en los botones de pestañas
+  document.querySelectorAll(".export-tab-btn").forEach((btn) => {
+    btn.classList.toggle("is-active", btn.dataset.exportFormat === currentFormat);
+  });
+
+  const labelEl = document.getElementById("exportFormatLabel");
+  const previewEl = document.getElementById("exportCodePreview");
+  if (!previewEl) return;
+
+  const data = generateAllHarmonies(state.currentColor, state.variations, "family");
+  const baseHex = data.seed.hex;
+  const primaryColors = data.harmonies.monochromatic?.colors || [];
+
+  let codeOutput = "";
+
+  if (currentFormat === "css") {
+    if (labelEl) labelEl.textContent = "Formato: CSS Custom Properties (:root)";
+    const lines = [
+      "/* ==================================================",
+      ` * Paleta generada en Coloristia (Base: ${baseHex})`,
+      " * ================================================== */",
+      ":root {",
+      `  --color-primary: ${baseHex};`
+    ];
+    primaryColors.forEach((c, i) => {
+      lines.push(`  --color-step-${i + 1}: ${c.hex};`);
+    });
+    lines.push("}");
+    codeOutput = lines.join("\n");
+  } else if (currentFormat === "tailwind") {
+    if (labelEl) labelEl.textContent = "Formato: Tailwind CSS Config (tailwind.config.js)";
+    const shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+    const stepCount = Math.min(primaryColors.length, shades.length);
+    const shadeLines = [];
+    for (let i = 0; i < stepCount; i++) {
+      shadeLines.push(`        ${shades[i]}: '${primaryColors[i].hex}',`);
+    }
+    codeOutput = [
+      "// tailwind.config.js",
+      "module.exports = {",
+      "  theme: {",
+      "    extend: {",
+      "      colors: {",
+      "        brand: {",
+      `          DEFAULT: '${baseHex}',`,
+      ...shadeLines,
+      "        },",
+      "      },",
+      "    },",
+      "  },",
+      "};"
+    ].join("\n");
+  } else if (currentFormat === "json") {
+    if (labelEl) labelEl.textContent = "Formato: Design Tokens (JSON)";
+    const jsonPalette = {
+      paletteName: `Coloristia ${baseHex}`,
+      baseColor: baseHex,
+      variations: state.variations,
+      tokens: primaryColors.map((c, i) => ({
+        step: i + 1,
+        hex: c.hex,
+        rgb: `rgb(${c.r}, ${c.g}, ${c.b})`,
+        wcagText: c.textColor,
+        contrast: getWcagContrast(c.r, c.g, c.b, c.textColor)
+      }))
+    };
+    codeOutput = JSON.stringify(jsonPalette, null, 2);
+  }
+
+  previewEl.textContent = codeOutput;
 }
 
 /**
@@ -1981,7 +2141,62 @@ export function initColoristia() {
   const randomBtn = document.getElementById("randomColorBtn");
   if (randomBtn) {
     randomBtn.addEventListener("click", () => {
+      randomBtn.classList.add("btn-pressed-anim");
+      setTimeout(() => randomBtn.classList.remove("btn-pressed-anim"), 250);
       generateRandomColor();
+    });
+  }
+
+  // Keyboard shortcut: Spacebar generates a new random color when not typing
+  window.addEventListener("keydown", (e) => {
+    if (e.code !== "Space" && e.key !== " ") return;
+    const activeEl = document.activeElement;
+    const tag = activeEl ? activeEl.tagName.toLowerCase() : "";
+    const isInput = tag === "input" || tag === "textarea" || tag === "select" || activeEl?.isContentEditable;
+    const anyModalOpen = document.querySelector(".modal.is-active");
+
+    if (!isInput && !anyModalOpen) {
+      e.preventDefault();
+      if (randomBtn) {
+        randomBtn.classList.add("btn-pressed-anim");
+        setTimeout(() => randomBtn.classList.remove("btn-pressed-anim"), 250);
+      }
+      generateRandomColor();
+    }
+  });
+
+  // Export palette modal triggers
+  const openExportBtn = document.getElementById("openExportModalBtn");
+  if (openExportBtn) {
+    openExportBtn.addEventListener("click", () => {
+      renderExportCode();
+      openModal("exportModal");
+    });
+  }
+
+  // Export format tab buttons
+  document.querySelectorAll(".export-tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const fmt = btn.dataset.exportFormat;
+      if (fmt) renderExportCode(fmt);
+    });
+  });
+
+  // Copy exported code button
+  const copyExportBtn = document.getElementById("copyExportCodeBtn");
+  if (copyExportBtn) {
+    copyExportBtn.addEventListener("click", () => {
+      const previewEl = document.getElementById("exportCodePreview");
+      if (!previewEl) return;
+      copyToClipboard(previewEl.textContent);
+      const btnText = document.getElementById("copyExportCodeBtnText");
+      if (btnText) {
+        const orig = btnText.textContent;
+        btnText.textContent = "✓ ¡Código Copiado!";
+        setTimeout(() => {
+          btnText.textContent = orig;
+        }, 1400);
+      }
     });
   }
 

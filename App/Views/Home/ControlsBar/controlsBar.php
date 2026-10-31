@@ -7,10 +7,17 @@
  */
 ?>
 <section class="controls-panel">
-  <!-- Top bar: Brand and My Palettes button -->
+  <!-- Top bar: Brand, Export and My Palettes buttons -->
   <div class="controls-top-bar">
     <span class="brand-title">Coloristia</span>
-    <div>
+    <div class="flex-row gap10 items-center">
+      <button type="button" id="openExportModalBtn" class="btn btn-outline btn-export" title="Exportar paleta en CSS, Tailwind o JSON">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 18 22 12 16 6"></polyline>
+          <polyline points="8 6 2 12 8 18"></polyline>
+        </svg>
+        <span>Exportar</span>
+      </button>
       <button type="button" id="openProjectsModalBtn" class="btn btn-outline btn-my-palettes">
         Mis Paletas
       </button>
@@ -46,7 +53,7 @@
       <!-- Hidden quick trigger for script compatibility -->
       <button type="button" id="quickColorTrigger" class="color-circle-btn" title="Seleccionar color base" style="display: none;" aria-label="Seleccionar color base"></button>
 
-      <button type="button" id="randomColorBtn" class="icon-btn" title="Generar color aleatorio" aria-label="Aleatorio">
+      <button type="button" id="randomColorBtn" class="icon-btn" title="Generar color aleatorio (Espacio)" aria-label="Aleatorio">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="23 4 23 10 17 10"></polyline>
           <polyline points="1 20 1 14 7 14"></polyline>
