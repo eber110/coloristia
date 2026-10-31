@@ -129,10 +129,33 @@
       <button type="button" class="modal-close-btn" data-close-modal="exportModal" aria-label="Cerrar">&times;</button>
     </div>
     <div class="modal-card-body">
-      <div class="export-tabs">
-        <button type="button" class="export-tab-btn is-active" data-export-format="css">CSS Variables</button>
-        <button type="button" class="export-tab-btn" data-export-format="tailwind">Tailwind Config</button>
-        <button type="button" class="export-tab-btn" data-export-format="json">JSON Tokens</button>
+      <div class="export-controls-bar flex-row justify-between items-center gap12 flex-wrap mb16">
+        <div class="export-tabs">
+          <button type="button" class="export-tab-btn is-active" data-export-format="css">CSS Variables</button>
+          <button type="button" class="export-tab-btn" data-export-format="tailwind">Tailwind Config</button>
+          <button type="button" class="export-tab-btn" data-export-format="json">JSON Tokens</button>
+        </div>
+
+        <div class="export-scope-wrap flex-row items-center gap8">
+          <label for="exportScopeSelect" class="text-xs text-muted" style="white-space: nowrap;">Alcance:</label>
+          <select id="exportScopeSelect" class="select-control" style="height: 34px; padding: 0 10px; font-size: 0.8rem;">
+            <option value="all">Todas las Armonías (12)</option>
+            <optgroup label="Armonías Individuales">
+              <option value="monochromatic">Monocromática</option>
+              <option value="complementary">Complementaria</option>
+              <option value="analogousStandard">Análoga</option>
+              <option value="triad">Tríada</option>
+              <option value="splitComplementary">Complementaria Dividida</option>
+              <option value="analogousExtended">Análoga Extendida</option>
+              <option value="analogousAccented">Análoga Acentuada</option>
+              <option value="tetradRectangular">Tétrada Rectangular</option>
+              <option value="tetradSquare">Tétrada Cuadrada</option>
+              <option value="pentagon">Pentágono</option>
+              <option value="hexagon">Hexágono</option>
+              <option value="goldenRatio">Proporción Áurea</option>
+            </optgroup>
+          </select>
+        </div>
       </div>
 
       <div class="code-preview-container">

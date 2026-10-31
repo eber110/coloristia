@@ -504,7 +504,13 @@ body {
 
 @media (max-width: 768px) {
   .harmonies-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 577px) {
+  .harmony-column.desktop-hidden {
+    display: none !important;
   }
 }
 
@@ -519,6 +525,29 @@ body {
   gap: 12px;
 }
 
+.harmony-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 2px;
+}
+
+.harmony-col-header .harmony-title {
+  margin: 0;
+  text-align: left;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .harmony-title {
   font-size: 0.95rem;
   font-weight: 700;
@@ -526,6 +555,38 @@ body {
   margin: 0 0 10px 0;
   text-align: center;
   letter-spacing: -0.01em;
+}
+
+.btn-col-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-col-export:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
+.btn-col-export:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-col-export svg {
+  flex-shrink: 0;
 }
 
 .cards-stack {
@@ -829,10 +890,69 @@ body {
   }
   .controls-actions-row {
     gap: 14px;
-    align-items: flex-start;
+    align-items: flex-end;
   }
   .control-buttons-group {
-    margin-top: 4px;
+    margin-top: 0;
+    align-self: flex-end;
+  }
+}
+
+@media (max-width: 576px) {
+  .controls-panel {
+    padding: 18px 16px;
+  }
+  .controls-top-bar {
+    justify-content: flex-start;
+  }
+  .controls-actions-row {
+    gap: 12px;
+    align-items: flex-end !important;
+  }
+  .control-buttons-group {
+    margin-top: 0 !important;
+    align-self: flex-end !important;
+    height: 38px;
+  }
+  .harmonies-section {
+    padding: 18px 16px;
+  }
+  .harmonies-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+  }
+  .mobile-harmony-bar {
+    width: 100%;
+  }
+  .save-project-bar {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+  .save-project-bar .input-control {
+    flex: 1;
+    min-width: 0;
+  }
+  .save-project-bar .btn-primary {
+    white-space: nowrap;
+    padding: 9px 16px;
+  }
+  /* Solo mostrar la paleta seleccionada en smartphones */
+  .harmonies-grid {
+    display: flex !important;
+    flex-direction: column;
+    width: 100%;
+    gap: 12px;
+  }
+  .harmonies-grid .harmony-column {
+    display: none !important;
+    width: 100% !important;
+  }
+  .harmonies-grid .harmony-column.is-mobile-visible {
+    display: flex !important;
   }
 }
 
@@ -1294,16 +1414,30 @@ body {
 
 /* Export Modal Styles */
 .modal-card-export {
-  max-width: 560px;
+  max-width: 620px;
   width: 95%;
+}
+
+.export-controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+
+.export-controls-bar .export-tabs {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
 }
 
 .export-tabs {
   display: flex;
   gap: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 10px;
-  margin-bottom: 14px;
 }
 
 .export-tab-btn {

@@ -9,7 +9,7 @@
 <section class="controls-panel">
   <!-- Top bar: Brand, Export and My Palettes buttons -->
   <div class="controls-top-bar">
-    <span class="brand-title">Coloristia</span>
+    <span class="brand-title no-phone">Coloristia</span>
     <div class="flex-row gap10 items-center">
       <button type="button" id="openExportModalBtn" class="btn btn-outline btn-export" title="Exportar paleta en CSS, Tailwind o JSON">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

@@ -7,8 +7,8 @@
 ?>
 <section class="harmonies-section">
   <div class="harmonies-header">
-    <!-- Section title and harmony filter dropdown -->
-    <div class="harmonies-title-group flex-wrap">
+    <!-- Section title and harmony filter dropdown (Desktop & Tablet) -->
+    <div class="harmonies-title-group flex-wrap no-phone">
       <h2 class="harmonies-title">
         Combinaciones (Base: <span id="baseColorLabel" class="font-mono" style="color: var(--color-primary-brand);">#C42127</span>)
       </h2>
@@ -20,6 +20,25 @@
           <option value="extra">Armonías Extendidas y Áurea</option>
         </select>
       </div>
+    </div>
+
+    <!-- Mobile harmony selector: displays only one palette on smartphone (Smartphone only) -->
+    <div class="mobile-harmony-bar no-desk no-tablet w100 flex-column gap6">
+      <label for="mobileHarmonySelect" class="control-label">Armonía cromática:</label>
+      <select id="mobileHarmonySelect" class="select-control w100" aria-label="Elegir armonía">
+        <option value="monochromatic">Monocromática</option>
+        <option value="complementary">Complementaria</option>
+        <option value="analogousStandard">Análoga</option>
+        <option value="triad">Tríada</option>
+        <option value="splitComplementary">Complementaria Dividida</option>
+        <option value="analogousExtended">Análoga Extendida</option>
+        <option value="analogousAccented">Análoga Acentuada</option>
+        <option value="tetradRectangular">Tétrada Rectangular</option>
+        <option value="tetradSquare">Tétrada Cuadrada</option>
+        <option value="pentagon">Pentágono</option>
+        <option value="hexagon">Hexágono</option>
+        <option value="goldenRatio">Proporción Áurea</option>
+      </select>
     </div>
 
     <!-- Save Project Bar -->

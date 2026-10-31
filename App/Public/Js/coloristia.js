@@ -658,6 +658,8 @@ const state = {
   projects: [],
   isLoadingProjects: false,
   selectedHarmonyFilter: "primary",
+  mobileSelectedHarmony: "monochromatic",
+  exportTarget: "all",
   isInitialRender: true,
   exportFormat: "css",
   get loadedPalette() {
@@ -1060,9 +1062,24 @@ export function renderHarmonies(options = {}) {
     "goldenRatio"
   ];
 
+  const allKeys = [
+    "monochromatic",
+    "complementary",
+    "analogousStandard",
+    "triad",
+    "splitComplementary",
+    "analogousExtended",
+    "analogousAccented",
+    "tetradRectangular",
+    "tetradSquare",
+    "pentagon",
+    "hexagon",
+    "goldenRatio"
+  ];
+
   const targetKeys = state.selectedHarmonyFilter === "extra"
     ? extraKeys
-    : (state.selectedHarmonyFilter === "all" ? [...primaryKeys, ...extraKeys] : primaryKeys);
+    : (state.selectedHarmonyFilter === "all" ? allKeys : primaryKeys);
 
   const container = document.getElementById("harmoniesGrid");
   if (!container) return;
@@ -1070,7 +1087,7 @@ export function renderHarmonies(options = {}) {
   const isInitial = options.isInitial || state.isInitialRender;
   const variationChange = options.variationChange || null;
 
-  // Check if existing columns match target keys
+  // Check if existing columns match all keys
   const existingColumns = container.querySelectorAll(".harmony-column");
   const columnKeyMap = {};
   existingColumns.forEach((col) => {
@@ -1079,22 +1096,28 @@ export function renderHarmonies(options = {}) {
     }
   });
 
-  const columnsMatch = targetKeys.length === existingColumns.length &&
-    targetKeys.every((k) => !!columnKeyMap[k]);
+  const columnsMatch = allKeys.length === existingColumns.length &&
+    allKeys.every((k) => !!columnKeyMap[k]);
 
   if (!columnsMatch) {
     container.innerHTML = "";
-    targetKeys.forEach((key) => {
+    allKeys.forEach((key) => {
       const item = data.harmonies[key];
       if (!item) return;
 
       const isColumnDisabled = isPureBlackOrWhite && key !== "monochromatic";
+      const isDesktopVisible = targetKeys.includes(key);
+      const isMobileVisible = key === state.mobileSelectedHarmony;
+
       const column = document.createElement("div");
-      column.className = `harmony-column flex-column gap12 ${isColumnDisabled ? "harmony-column-disabled" : ""}`;
+      column.className = `harmony-column flex-column gap12 ${isColumnDisabled ? "harmony-column-disabled" : ""} ${!isDesktopVisible ? "desktop-hidden" : ""} ${isMobileVisible ? "is-mobile-visible" : ""}`;
       column.dataset.harmonyKey = key;
 
+      const header = document.createElement("div");
+      header.className = "harmony-col-header flex-row items-center justify-between gap8 w100";
+
       const title = document.createElement("h3");
-      title.className = "harmony-title text-center";
+      title.className = "harmony-title";
       if (isColumnDisabled) {
         title.innerHTML = `${item.rule.name} <span class="badge-disabled">(Desactivada)</span>`;
       } else if (isPureBlackOrWhite && key === "monochromatic") {
@@ -1102,7 +1125,31 @@ export function renderHarmonies(options = {}) {
       } else {
         title.textContent = item.rule.name;
       }
-      column.appendChild(title);
+      header.appendChild(title);
+
+      const exportBtn = document.createElement("button");
+      exportBtn.type = "button";
+      exportBtn.className = "btn-col-export";
+      exportBtn.dataset.harmonyKey = key;
+      exportBtn.title = `Exportar paleta ${item.rule.name}`;
+      exportBtn.setAttribute("aria-label", `Exportar paleta ${item.rule.name}`);
+      exportBtn.innerHTML = `
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 18 22 12 16 6"></polyline>
+          <polyline points="8 6 2 12 8 18"></polyline>
+        </svg>
+        <span>Exportar</span>
+      `;
+      if (isColumnDisabled) {
+        exportBtn.disabled = true;
+      }
+      exportBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openExportModalForHarmony(key);
+      });
+      header.appendChild(exportBtn);
+
+      column.appendChild(header);
 
       const cardsContainer = document.createElement("div");
       cardsContainer.className = "cards-stack flex-column gap8 w100";
@@ -1117,7 +1164,7 @@ export function renderHarmonies(options = {}) {
     });
   } else {
     // Columns already exist: update existing cards in place without destroying DOM!
-    targetKeys.forEach((key) => {
+    allKeys.forEach((key) => {
       const item = data.harmonies[key];
       const column = columnKeyMap[key];
       if (!item || !column) return;
@@ -1129,6 +1176,11 @@ export function renderHarmonies(options = {}) {
         column.classList.remove("harmony-column-disabled");
       }
 
+      const isDesktopVisible = targetKeys.includes(key);
+      const isMobileVisible = key === state.mobileSelectedHarmony;
+      column.classList.toggle("desktop-hidden", !isDesktopVisible);
+      column.classList.toggle("is-mobile-visible", isMobileVisible);
+
       const title = column.querySelector(".harmony-title");
       if (title) {
         if (isColumnDisabled) {
@@ -1138,6 +1190,11 @@ export function renderHarmonies(options = {}) {
         } else {
           title.textContent = item.rule.name;
         }
+      }
+
+      const exportBtn = column.querySelector(".btn-col-export");
+      if (exportBtn) {
+        exportBtn.disabled = isColumnDisabled;
       }
 
       const cardsContainer = column.querySelector(".cards-stack");
@@ -1198,7 +1255,22 @@ export function renderHarmonies(options = {}) {
     });
   }
 
+  container.dataset.mobileActive = state.mobileSelectedHarmony;
+
   state.isInitialRender = false;
+}
+
+/**
+ * Updates visible single harmony column on smartphone screens.
+ */
+export function updateMobileHarmonyVisibility() {
+  const container = document.getElementById("harmoniesGrid");
+  if (!container) return;
+  container.dataset.mobileActive = state.mobileSelectedHarmony;
+  const cols = container.querySelectorAll(".harmony-column");
+  cols.forEach((col) => {
+    col.classList.toggle("is-mobile-visible", col.dataset.harmonyKey === state.mobileSelectedHarmony);
+  });
 }
 
 /**
@@ -2258,13 +2330,23 @@ export function initColoristia() {
     saveBtn.addEventListener("click", () => saveCurrentProject());
   }
 
-  // Harmonies filter dropdown
+  // Harmonies filter dropdown (Desktop & Tablet)
   const filterHarmoniesSelect = document.getElementById("harmoniesFilterSelect");
   if (filterHarmoniesSelect) {
     filterHarmoniesSelect.value = state.selectedHarmonyFilter;
     filterHarmoniesSelect.addEventListener("change", (e) => {
       state.selectedHarmonyFilter = e.target.value;
       renderHarmonies();
+    });
+  }
+
+  // Mobile harmony selector dropdown (Smartphone only)
+  const mobileHarmonySelect = document.getElementById("mobileHarmonySelect");
+  if (mobileHarmonySelect) {
+    mobileHarmonySelect.value = state.mobileSelectedHarmony;
+    mobileHarmonySelect.addEventListener("change", (e) => {
+      state.mobileSelectedHarmony = e.target.value;
+      updateMobileHarmonyVisibility();
     });
   }
 
