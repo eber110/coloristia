@@ -476,19 +476,24 @@ export function formatColorValue(color, system = "hex") {
 }
 
 /**
- * Generates an N-color palette following harmonic geometry and dynamic scaling rules.
+ * Generates an N-color harmony palette dynamically scaled and nuanced according to the seed color's
+ * exact Hue, Saturation, and Brightness (HSV model).
  *
  * @param {number} H0 Seed hue [0, 360)
- * @param {number} S0 Seed saturation [0, 100]
- * @param {number} L0 Seed lightness [0, 100]
+ * @param {number} S0 Seed saturation [0, 1] (or [0, 100])
+ * @param {number} V0 Seed brightness/value [0, 1] (or [0, 100])
  * @param {string} harmonyKey Harmony identifier (e.g., 'monochromatic', 'complementary')
  * @param {number} N Total variations count (clamped between 6 and 16)
  * @param {string} sortMode 'family' (anchor grouped gradient) or 'luminance' (global gradient)
  * @returns {Array<Object>} Generated color palette objects.
  */
-export function generatePalette(H0, S0, L0, harmonyKey = "monochromatic", N = 6, sortMode = "family") {
+export function generatePalette(H0, S0, V0, harmonyKey = "monochromatic", N = 6, sortMode = "family") {
   const clampedN = Math.max(6, Math.min(16, Math.round(N)));
   const harmony = HARMONY_RULES[harmonyKey] || HARMONY_RULES.monochromatic;
+
+  // Normalize S0 and V0 to [0, 1] regardless of whether caller passed 0-1 or 0-100
+  const normS0 = Math.max(0, Math.min(1, S0 > 1 ? S0 / 100 : S0));
+  const normV0 = Math.max(0, Math.min(1, V0 > 1 ? V0 / 100 : V0));
 
   let shifts = [];
   let K = 1;
@@ -522,65 +527,60 @@ export function generatePalette(H0, S0, L0, harmonyKey = "monochromatic", N = 6,
     anchorCounts.push(j < Rmod ? Q + 1 : Q);
   }
 
-  // Step 2: Calculate L, S, and Bezold-Brücke micro-rotation per anchor
+  // Step 2: Calculate V, S, and Bezold-Brücke micro-rotation per anchor
   const colors = [];
 
-  // Continuous, smooth lightness range:
-  // Baseline: Lmin = 14%, Lmax = 90% (rich, vibrant darks without premature murky black collapse)
-  // When L0 < 18%: smoothly scale Lmin down towards 0% using smoothstep curve (for near-black/black seeds)
-  // When L0 > 82%: smoothly scale Lmax up towards 100% using smoothstep curve (for near-white/white seeds)
-  let Lmin = 14;
-  let Lmax = 90;
-
-  if (L0 < 18) {
-    const t = Math.max(0, L0 / 18);
-    // Smooth cubic smoothstep curve (derivative is 0 at L0 = 18 for seamless C1 continuity)
-    Lmin = 14 * (t * t * (3 - 2 * t));
-  } else if (L0 > 82) {
-    const t = Math.min(1, Math.max(0, (L0 - 82) / 18));
-    // Smooth cubic smoothstep curve (derivative is 0 at L0 = 82 for seamless C1 continuity)
-    Lmax = 90 + 10 * (t * t * (3 - 2 * t));
-  }
-
   // Check if color is neutral grayscale (grays, black, white)
-  const isAchromatic = S0 <= 2;
+  const isAchromatic = normS0 <= 0.02;
+
+  // Dynamic brightness bounds directly responsive to seed brightness (normV0)
+  // Ensures darkest swatch is deep and rich (Vmin: 0.10-0.16) and lightest swatch reaches high luminosity (Vmax: 0.98)
+  const Vmin = 0.10 + 0.06 * normV0;
+  const Vmax = 0.98;
 
   for (let j = 0; j < effectiveK; j++) {
     const Mj = anchorCounts[j];
     const deltaH = activeShifts[j];
+    const baseHue = normHue(H0 + deltaH);
 
     for (let m = 0; m < Mj; m++) {
-      let Ljm;
-      if (Mj === 1) {
-        Ljm = L0;
-      } else {
-        const deltaL = (Lmax - Lmin) / (Mj - 1);
-        Ljm = Lmin + (m * deltaL);
-      }
-
-      // Parabolic saturation curve
+      let Vjm;
       let Sjm;
-      if (isAchromatic) {
-        Sjm = 0;
+      let Hjm;
+
+      if (Mj === 1) {
+        Vjm = normV0;
+        Sjm = normS0;
+        Hjm = baseHue;
       } else {
-        const Dcentro = Math.abs(Ljm - 50) / 50;
-        const minAllowedS = Math.min(S0, 15);
-        Sjm = Math.max(minAllowedS, S0 * (1 - 0.45 * Math.pow(Dcentro, 2)));
+        const t = m / (Mj - 1); // 0.0 (darkest) to 1.0 (lightest)
+
+        // Interpolate brightness smoothly based on the seed's dynamic range
+        Vjm = Vmin + (Vmax - Vmin) * t;
+
+        // Nuanced saturation curve directly scaled by the seed's saturation (normS0)
+        // At t=0 (dark shade): moderate saturation preserves deep tone
+        // At mid t: reaches full seed vibrancy
+        // At t=1 (light tint): tapers down to a luminous delicate wash near white
+        if (isAchromatic) {
+          Sjm = 0;
+        } else if (t <= 0.45) {
+          const u = t / 0.45;
+          Sjm = normS0 * (0.65 + 0.35 * Math.sin((Math.PI / 2) * u));
+        } else {
+          const u = (t - 0.45) / 0.55;
+          Sjm = normS0 * (0.08 + 0.92 * Math.cos((Math.PI / 2) * u));
+        }
+
+        // Bezold-Brücke natural hue micro-rotation (±3°)
+        const microShift = isAchromatic ? 0 : (t - 0.5) * 6;
+        Hjm = normHue(baseHue + microShift);
       }
 
-      // Bezold-Brücke effect: natural hue rotation (±6°)
-      const microShift = isAchromatic ? 0 : ((Ljm - 50) / 50) * 6;
-      let Hjm = normHue(H0 + deltaH + microShift);
-
-      // Perceptual brightness compensation for single-anchor yellows/limes/cyans
-      if (Mj === 1 && !isAchromatic && Hjm >= 45 && Hjm <= 160) {
-        const factor = Math.max(0, Math.sin(((Hjm - 45) / 115) * Math.PI));
-        Ljm = Math.max(10, Ljm - 8 * factor);
-      }
-
-      // Convert to RGB and other formats
-      const rgb = hslToRgb(Hjm, Sjm, Ljm);
+      // Convert HSV to RGB and HSL
+      const rgb = hsvNormToRgb(Hjm, Sjm, Vjm);
       const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
+      const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
       const Y = getRelativeLuminance(rgb.r, rgb.g, rgb.b);
       const textColor = getAccessibleTextColor(rgb.r, rgb.g, rgb.b);
 
@@ -588,8 +588,8 @@ export function generatePalette(H0, S0, L0, harmonyKey = "monochromatic", N = 6,
         anchorIndex: j,
         toneIndex: m,
         h: Math.round(Hjm),
-        s: Math.round(Sjm),
-        l: Math.round(Ljm),
+        s: hsl.s,
+        l: hsl.l,
         r: rgb.r,
         g: rgb.g,
         b: rgb.b,
@@ -618,13 +618,14 @@ export function generatePalette(H0, S0, L0, harmonyKey = "monochromatic", N = 6,
  */
 export function generateAllHarmonies(seedHex, variations = 6, sortMode = "family") {
   const rgb = hexToRgb(seedHex);
+  const hsv = rgbToHsvNorm(rgb.r, rgb.g, rgb.b);
   const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
 
   const results = {};
   for (const [key, rule] of Object.entries(HARMONY_RULES)) {
     results[key] = {
       rule: rule,
-      colors: generatePalette(hsl.h, hsl.s, hsl.l, key, variations, sortMode)
+      colors: generatePalette(hsv.h, hsv.s, hsv.v, key, variations, sortMode)
     };
   }
 
@@ -632,6 +633,7 @@ export function generateAllHarmonies(seedHex, variations = 6, sortMode = "family
     seed: {
       hex: rgbToHex(rgb.r, rgb.g, rgb.b),
       rgb: rgb,
+      hsv: hsv,
       hsl: hsl,
       textColor: getAccessibleTextColor(rgb.r, rgb.g, rgb.b)
     },
@@ -659,6 +661,7 @@ const state = {
   isLoadingProjects: false,
   selectedHarmonyFilter: "primary",
   mobileSelectedHarmony: "monochromatic",
+  activeHarmony: "monochromatic",
   exportTarget: "all",
   isInitialRender: true,
   exportFormat: "css",
@@ -1036,6 +1039,9 @@ export function renderHarmonies(options = {}) {
   // Update hero swatches and labels
   renderHeroSeed({ skipTrackRebuild: !!options.skipHeroRebuild });
 
+  // Update harmonic text colors card (darkest and lightest tones of chosen palette)
+  renderTextColorsCard(data);
+
   const projectNameInput = document.getElementById("projectNameInput");
   if (projectNameInput && (!projectNameInput.value || projectNameInput.dataset.auto === "true")) {
     projectNameInput.value = `Paleta Base ${data.seed.hex}`;
@@ -1251,6 +1257,112 @@ export function updateMobileHarmonyVisibility() {
   cols.forEach((col) => {
     col.classList.toggle("is-mobile-visible", col.dataset.harmonyKey === state.mobileSelectedHarmony);
   });
+}
+
+/**
+ * Renders the harmonic text colors card displaying the lightest and darkest tones
+ * of the currently chosen harmony palette for accessible typography.
+ *
+ * @param {Object} [harmonyData] Pre-calculated harmony data from generateAllHarmonies.
+ */
+export function renderTextColorsCard(harmonyData = null) {
+  const card = document.getElementById("paletteTextColorsCard");
+  if (!card) return;
+
+  const data = harmonyData || generateAllHarmonies(state.currentColor, state.variations, "family");
+  const activeKey = state.activeHarmony || state.mobileSelectedHarmony || "monochromatic";
+  const harmonyItem = data.harmonies[activeKey] || data.harmonies.monochromatic;
+  if (!harmonyItem || !harmonyItem.colors || harmonyItem.colors.length === 0) return;
+
+  const colors = harmonyItem.colors;
+
+  // Find darkest (lowest luminance) and lightest (highest luminance)
+  let darkest = colors[0];
+  let lightest = colors[0];
+
+  colors.forEach((c) => {
+    if (c.luminance < darkest.luminance) darkest = c;
+    if (c.luminance > lightest.luminance) lightest = c;
+  });
+
+  // Sync harmony select dropdown if present
+  const harmonySelect = document.getElementById("textColorHarmonySelect");
+  if (harmonySelect && document.activeElement !== harmonySelect) {
+    harmonySelect.value = activeKey;
+  }
+
+  // Calculate contrast ratio directly between the palette's own lightest and darkest tones
+  const paletteRatio = (lightest.luminance + 0.05) / (darkest.luminance + 0.05);
+  const paletteLevel = paletteRatio >= 7 ? "AAA" : (paletteRatio >= 4.5 ? "AA" : "AA+");
+  const isPass = paletteRatio >= 4.5;
+  const ratioBadgeText = `${paletteRatio.toFixed(1)}:1 ${paletteLevel}`;
+  const ratioBadgeClass = `palette-text-ratio-badge ${isPass ? "is-wcag-pass" : "is-wcag-warn"}`;
+
+  // 1. Dark Text (for light backgrounds) — Fondo claro de la paleta con texto en el tono más oscuro de la paleta
+  const darkFormatted = formatColorValue(darkest, state.colorSystem);
+  const darkValueEl = document.getElementById("darkTextColorValue");
+  const darkDotEl = document.getElementById("darkTextDot");
+  const darkHeadingEl = document.getElementById("darkTextHeading");
+  const darkBodyEl = document.getElementById("darkTextBody");
+  const darkBadgeEl = document.getElementById("darkTextWcagBadge");
+  const darkRatioLabel = document.getElementById("darkTextRatioLabel");
+  const darkCopyBtn = document.getElementById("copyDarkTextBtn");
+  const darkPreviewSurface = document.getElementById("darkTextPreviewSurface");
+
+  if (darkValueEl) darkValueEl.textContent = darkFormatted;
+  if (darkDotEl) darkDotEl.style.backgroundColor = darkest.hex;
+  if (darkCopyBtn) darkCopyBtn.dataset.color = darkFormatted;
+
+  if (darkPreviewSurface) {
+    darkPreviewSurface.style.backgroundColor = lightest.hex;
+    darkPreviewSurface.style.borderColor = "rgba(0, 0, 0, 0.14)";
+  }
+  if (darkHeadingEl) darkHeadingEl.style.color = darkest.hex;
+  if (darkBodyEl) {
+    darkBodyEl.style.color = darkest.hex;
+    darkBodyEl.style.opacity = "0.92";
+  }
+  if (darkBadgeEl) {
+    darkBadgeEl.textContent = ratioBadgeText;
+    darkBadgeEl.className = ratioBadgeClass;
+  }
+  if (darkRatioLabel) {
+    darkRatioLabel.style.color = darkest.hex;
+    darkRatioLabel.style.opacity = "0.75";
+  }
+
+  // 2. Light Text (for dark backgrounds) — Fondo oscuro de la paleta con texto en el tono más claro de la paleta
+  const lightFormatted = formatColorValue(lightest, state.colorSystem);
+  const lightValueEl = document.getElementById("lightTextColorValue");
+  const lightDotEl = document.getElementById("lightTextDot");
+  const lightHeadingEl = document.getElementById("lightTextHeading");
+  const lightBodyEl = document.getElementById("lightTextBody");
+  const lightBadgeEl = document.getElementById("lightTextWcagBadge");
+  const lightRatioLabel = document.getElementById("lightTextRatioLabel");
+  const lightCopyBtn = document.getElementById("copyLightTextBtn");
+  const lightPreviewSurface = document.getElementById("lightTextPreviewSurface");
+
+  if (lightValueEl) lightValueEl.textContent = lightFormatted;
+  if (lightDotEl) lightDotEl.style.backgroundColor = lightest.hex;
+  if (lightCopyBtn) lightCopyBtn.dataset.color = lightFormatted;
+
+  if (lightPreviewSurface) {
+    lightPreviewSurface.style.backgroundColor = darkest.hex;
+    lightPreviewSurface.style.borderColor = "rgba(255, 255, 255, 0.14)";
+  }
+  if (lightHeadingEl) lightHeadingEl.style.color = lightest.hex;
+  if (lightBodyEl) {
+    lightBodyEl.style.color = lightest.hex;
+    lightBodyEl.style.opacity = "0.92";
+  }
+  if (lightBadgeEl) {
+    lightBadgeEl.textContent = ratioBadgeText;
+    lightBadgeEl.className = ratioBadgeClass;
+  }
+  if (lightRatioLabel) {
+    lightRatioLabel.style.color = lightest.hex;
+    lightRatioLabel.style.opacity = "0.75";
+  }
 }
 
 /**
@@ -2012,7 +2124,7 @@ export function closeModal(modalId) {
 }
 
 // =========================================================================
-// SECTION 2.1: IN-APP CUSTOM COLOR PICKER
+// SECTION 2.1: IN-APP CUSTOM COLOR PICKER (HSV: TONO, SATURACIÓN, BRILLO)
 // =========================================================================
 
 const pickerState = {
@@ -2024,26 +2136,48 @@ const pickerState = {
 };
 
 /**
- * Synchronizes the color picker UI handles and colors from current HSV.
+ * Synchronizes the color picker UI handles, dynamic track gradients, preview circle, and hex input.
  */
 export function syncPickerUI() {
-  const satValBox = document.getElementById("customPickerSatVal");
-  const satValHandle = document.getElementById("customPickerSatValHandle");
-  const hueBar = document.getElementById("customPickerHueBar");
+  const hueTrack = document.getElementById("customPickerHueTrack");
   const hueHandle = document.getElementById("customPickerHueHandle");
+  const satTrack = document.getElementById("customPickerSatTrack");
+  const satHandle = document.getElementById("customPickerSatHandle");
+  const valTrack = document.getElementById("customPickerValTrack");
+  const valHandle = document.getElementById("customPickerValHandle");
+  const previewCircle = document.getElementById("customPickerPreviewCircle");
   const hexInput = document.getElementById("customPickerHexInput");
 
-  if (!satValBox || !satValHandle || !hueBar || !hueHandle) return;
+  if (!hueTrack || !hueHandle || !satTrack || !satHandle || !valTrack || !valHandle) return;
 
-  const pureHueHsl = `hsl(${Math.round(pickerState.h)}, 100%, 50%)`;
-  satValBox.style.backgroundColor = pureHueHsl;
+  // 1. Tono (Hue) handle position & ARIA
+  const huePercent = (pickerState.h / 360) * 100;
+  hueHandle.style.left = `${huePercent}%`;
+  hueTrack.setAttribute("aria-valuenow", Math.round(pickerState.h));
 
-  satValHandle.style.left = `${pickerState.s * 100}%`;
-  satValHandle.style.top = `${(1 - pickerState.v) * 100}%`;
+  // 2. Saturación handle position, dynamic gradient & ARIA
+  const satPercent = pickerState.s * 100;
+  satHandle.style.left = `${satPercent}%`;
+  satTrack.setAttribute("aria-valuenow", Math.round(satPercent));
 
-  hueHandle.style.left = `${(pickerState.h / 360) * 100}%`;
-  hueHandle.style.backgroundColor = pureHueHsl;
+  const rgbSat0 = hsvNormToRgb(pickerState.h, 0, pickerState.v);
+  const rgbSat1 = hsvNormToRgb(pickerState.h, 1, pickerState.v);
+  satTrack.style.background = `linear-gradient(to right, rgb(${rgbSat0.r}, ${rgbSat0.g}, ${rgbSat0.b}), rgb(${rgbSat1.r}, ${rgbSat1.g}, ${rgbSat1.b}))`;
 
+  // 3. Brillo (Value) handle position, dynamic gradient & ARIA
+  const valPercent = pickerState.v * 100;
+  valHandle.style.left = `${valPercent}%`;
+  valTrack.setAttribute("aria-valuenow", Math.round(valPercent));
+
+  const rgbVal1 = hsvNormToRgb(pickerState.h, pickerState.s, 1);
+  valTrack.style.background = `linear-gradient(to right, #000000, rgb(${rgbVal1.r}, ${rgbVal1.g}, ${rgbVal1.b}))`;
+
+  // 4. Color preview circle
+  if (previewCircle) {
+    previewCircle.style.backgroundColor = state.currentColor;
+  }
+
+  // 5. Hex badge input
   if (hexInput && document.activeElement !== hexInput) {
     hexInput.value = state.currentColor;
   }
@@ -2056,6 +2190,7 @@ export function syncPickerUI() {
  */
 export function syncPickerFromColor(hex) {
   const rgb = hexToRgb(hex);
+  if (!rgb) return;
   const hsv = rgbToHsvNorm(rgb.r, rgb.g, rgb.b);
   pickerState.h = hsv.h;
   pickerState.s = hsv.s;
@@ -2080,6 +2215,7 @@ export function openColorPicker(triggerEl) {
     if (heroContainer) {
       popover.style.top = "100%";
       popover.style.left = "50%";
+      popover.style.right = "auto";
       popover.style.transform = "translateX(-50%) translateY(14px)";
       heroContainer.appendChild(popover);
     }
@@ -2087,8 +2223,16 @@ export function openColorPicker(triggerEl) {
     const parent = triggerEl.parentElement || triggerEl;
     parent.style.position = "relative";
     popover.style.top = "calc(100% + 10px)";
-    popover.style.left = "0";
-    popover.style.transform = "none";
+    const rect = triggerEl.getBoundingClientRect();
+    if (rect.left + 280 > window.innerWidth) {
+      popover.style.left = "auto";
+      popover.style.right = "0";
+      popover.style.transform = "none";
+    } else {
+      popover.style.left = "0";
+      popover.style.right = "auto";
+      popover.style.transform = "none";
+    }
     parent.appendChild(popover);
   }
 
@@ -2122,65 +2266,149 @@ export function toggleColorPicker(triggerEl) {
 }
 
 /**
- * Initializes drag events and listeners for the custom color picker.
+ * Initializes touch and mouse drag events and listeners for the custom color picker sliders.
  */
 function initCustomPickerEvents() {
-  const satValBox = document.getElementById("customPickerSatVal");
-  const hueBar = document.getElementById("customPickerHueBar");
+  const hueTrack = document.getElementById("customPickerHueTrack");
+  const satTrack = document.getElementById("customPickerSatTrack");
+  const valTrack = document.getElementById("customPickerValTrack");
   const hexInput = document.getElementById("customPickerHexInput");
+  const acceptBtn = document.getElementById("customPickerAcceptBtn");
 
-  if (!satValBox || !hueBar) return;
+  if (!hueTrack || !satTrack || !valTrack) return;
 
-  const updateSatVal = (e) => {
-    const rect = satValBox.getBoundingClientRect();
-    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-    const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
-
-    pickerState.s = x / rect.width;
-    pickerState.v = 1 - (y / rect.height);
-
+  const updateSeedFromPicker = () => {
     const rgb = hsvNormToRgb(pickerState.h, pickerState.s, pickerState.v);
     const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
     setSeedColor(hex, false);
     syncPickerUI();
   };
 
-  const updateHue = (e) => {
-    const rect = hueBar.getBoundingClientRect();
-    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-    const h = (x / rect.width) * 360;
-
-    pickerState.h = normHue(h);
-
-    const rgb = hsvNormToRgb(pickerState.h, pickerState.s, pickerState.v);
-    const hex = rgbToHex(rgb.r, rgb.g, rgb.b);
-    setSeedColor(hex, false);
-    syncPickerUI();
-  };
-
-  const setupDrag = (elem, onUpdate) => {
+  /**
+   * Sets up drag and tap handling on a slider track with touch and pointer support.
+   *
+   * @param {HTMLElement} trackElem
+   * @param {function(number): void} onRatioChange
+   */
+  const setupSliderInteraction = (trackElem, onRatioChange) => {
     let isDragging = false;
-    elem.addEventListener("pointerdown", (e) => {
+    let activePointerId = null;
+
+    const calculateRatio = (clientX) => {
+      const rect = trackElem.getBoundingClientRect();
+      if (rect.width <= 0) return 0;
+      const clampedX = Math.max(0, Math.min(rect.width, clientX - rect.left));
+      return clampedX / rect.width;
+    };
+
+    const handleStart = (clientX, pointerId) => {
       isDragging = true;
-      try { elem.setPointerCapture(e.pointerId); } catch (_) {}
-      onUpdate(e);
-    });
-    elem.addEventListener("pointermove", (e) => {
+      activePointerId = pointerId !== undefined ? pointerId : null;
+      if (pointerId !== undefined && trackElem.setPointerCapture) {
+        try { trackElem.setPointerCapture(pointerId); } catch (_) {}
+      }
+      onRatioChange(calculateRatio(clientX));
+    };
+
+    const handleMove = (clientX, pointerId) => {
       if (!isDragging) return;
-      onUpdate(e);
-    });
-    const stopDrag = (e) => {
+      if (activePointerId !== null && pointerId !== undefined && pointerId !== activePointerId) return;
+      onRatioChange(calculateRatio(clientX));
+    };
+
+    const handleEnd = (pointerId) => {
       if (!isDragging) return;
       isDragging = false;
-      try { elem.releasePointerCapture(e.pointerId); } catch (_) {}
+      if (activePointerId !== null && trackElem.releasePointerCapture) {
+        try { trackElem.releasePointerCapture(activePointerId); } catch (_) {}
+      }
+      activePointerId = null;
     };
-    elem.addEventListener("pointerup", stopDrag);
-    elem.addEventListener("pointercancel", stopDrag);
+
+    // Pointer events for desktop and modern touch devices
+    trackElem.addEventListener("pointerdown", (e) => {
+      if (e.button !== undefined && e.button !== 0) return;
+      handleStart(e.clientX, e.pointerId);
+      e.preventDefault();
+    });
+
+    trackElem.addEventListener("pointermove", (e) => {
+      if (!isDragging) return;
+      handleMove(e.clientX, e.pointerId);
+      e.preventDefault();
+    });
+
+    const stopPointer = (e) => {
+      handleEnd(e.pointerId);
+    };
+    trackElem.addEventListener("pointerup", stopPointer);
+    trackElem.addEventListener("pointercancel", stopPointer);
+
+    // Native touch events fallback for mobile screens
+    trackElem.addEventListener("touchstart", (e) => {
+      if (!e.touches || e.touches.length === 0) return;
+      handleStart(e.touches[0].clientX);
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+
+    trackElem.addEventListener("touchmove", (e) => {
+      if (!isDragging || !e.touches || e.touches.length === 0) return;
+      handleMove(e.touches[0].clientX);
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+
+    const stopTouch = () => {
+      handleEnd();
+    };
+    trackElem.addEventListener("touchend", stopTouch);
+    trackElem.addEventListener("touchcancel", stopTouch);
   };
 
-  setupDrag(satValBox, updateSatVal);
-  setupDrag(hueBar, updateHue);
+  // 1. Tono (Hue: 0° - 360°)
+  setupSliderInteraction(hueTrack, (ratio) => {
+    pickerState.h = normHue(ratio * 360);
+    updateSeedFromPicker();
+  });
 
+  // 2. Saturación (Saturation: 0 - 1)
+  setupSliderInteraction(satTrack, (ratio) => {
+    pickerState.s = Math.max(0, Math.min(1, ratio));
+    updateSeedFromPicker();
+  });
+
+  // 3. Brillo (Value: 0 - 1)
+  setupSliderInteraction(valTrack, (ratio) => {
+    pickerState.v = Math.max(0, Math.min(1, ratio));
+    updateSeedFromPicker();
+  });
+
+  // Keyboard accessibility
+  const handleKeyboardStep = (e, getValue, setValue, step, min, max) => {
+    let delta = 0;
+    if (e.key === "ArrowLeft" || e.key === "ArrowDown") delta = -step;
+    else if (e.key === "ArrowRight" || e.key === "ArrowUp") delta = step;
+    else if (e.key === "PageDown") delta = -step * 5;
+    else if (e.key === "PageUp") delta = step * 5;
+    else return;
+
+    e.preventDefault();
+    const current = getValue();
+    const updated = Math.max(min, Math.min(max, current + delta));
+    setValue(updated);
+    updateSeedFromPicker();
+  };
+
+  hueTrack.addEventListener("keydown", (e) => {
+    handleKeyboardStep(e, () => pickerState.h, (val) => { pickerState.h = normHue(val); }, 2, 0, 360);
+  });
+  satTrack.addEventListener("keydown", (e) => {
+    handleKeyboardStep(e, () => pickerState.s, (val) => { pickerState.s = val; }, 0.02, 0, 1);
+  });
+  valTrack.addEventListener("keydown", (e) => {
+    handleKeyboardStep(e, () => pickerState.v, (val) => { pickerState.v = val; }, 0.02, 0, 1);
+  });
+
+  // Hex input listener
   if (hexInput) {
     hexInput.addEventListener("input", (e) => {
       let val = e.target.value.trim();
@@ -2194,6 +2422,13 @@ function initCustomPickerEvents() {
         pickerState.v = hsv.v;
         syncPickerUI();
       }
+    });
+  }
+
+  // Aceptar button
+  if (acceptBtn) {
+    acceptBtn.addEventListener("click", () => {
+      closeColorPicker();
     });
   }
 
@@ -2505,11 +2740,65 @@ export function initColoristia() {
 
   // Mobile harmony selector dropdown (Smartphone only)
   const mobileHarmonySelect = document.getElementById("mobileHarmonySelect");
+  const textColorHarmonySelect = document.getElementById("textColorHarmonySelect");
+
   if (mobileHarmonySelect) {
     mobileHarmonySelect.value = state.mobileSelectedHarmony;
     mobileHarmonySelect.addEventListener("change", (e) => {
       state.mobileSelectedHarmony = e.target.value;
+      state.activeHarmony = e.target.value;
+      if (textColorHarmonySelect) textColorHarmonySelect.value = e.target.value;
+      renderTextColorsCard();
       updateMobileHarmonyVisibility();
+    });
+  }
+
+  // Harmonic text colors card: harmony select & copy buttons
+  if (textColorHarmonySelect) {
+    textColorHarmonySelect.value = state.activeHarmony;
+    textColorHarmonySelect.addEventListener("change", (e) => {
+      state.activeHarmony = e.target.value;
+      state.mobileSelectedHarmony = e.target.value;
+      if (mobileHarmonySelect) mobileHarmonySelect.value = e.target.value;
+      renderTextColorsCard();
+      updateMobileHarmonyVisibility();
+    });
+  }
+
+  const initTextCopyBtn = (btnId) => {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      const color = btn.dataset.color;
+      if (!color) return;
+      copyToClipboard(color);
+      const hint = btn.querySelector(".palette-text-copy-hint");
+      if (hint) {
+        const orig = hint.textContent;
+        hint.textContent = "✓ Copiado";
+        setTimeout(() => {
+          hint.textContent = orig;
+        }, 1100);
+      }
+    });
+  };
+  initTextCopyBtn("copyDarkTextBtn");
+  initTextCopyBtn("copyLightTextBtn");
+
+  // Clicking any desktop harmony column to sync active text colors
+  const harmoniesGridElem = document.getElementById("harmoniesGrid");
+  if (harmoniesGridElem) {
+    harmoniesGridElem.addEventListener("click", (e) => {
+      const col = e.target.closest(".harmony-column");
+      if (!col || e.target.closest(".color-card")) return;
+      const key = col.dataset.harmonyKey;
+      if (key) {
+        state.activeHarmony = key;
+        state.mobileSelectedHarmony = key;
+        if (textColorHarmonySelect) textColorHarmonySelect.value = key;
+        if (mobileHarmonySelect) mobileHarmonySelect.value = key;
+        renderTextColorsCard();
+      }
     });
   }
 

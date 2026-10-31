@@ -15,20 +15,39 @@
     </div>
   </div>
 
-  <!-- In-app Custom Coloristia Color Picker Popover -->
+  <!-- In-app Custom Coloristia Color Picker Popover (HSV: Tono, Saturación, Brillo) -->
   <div id="coloristiaPickerPopover" class="custom-picker-popover" style="display: none;" role="dialog" aria-label="Selector de color personalizado">
-    <div class="custom-picker-sat-val" id="customPickerSatVal">
-      <div class="custom-picker-sat-val-white"></div>
-      <div class="custom-picker-sat-val-black"></div>
-      <div class="custom-picker-handle" id="customPickerSatValHandle"></div>
+    <!-- Tono (Hue) -->
+    <div class="custom-picker-slider-group">
+      <label for="customPickerHueTrack" class="custom-picker-label">Tono</label>
+      <div class="custom-picker-slider-track custom-picker-hue-track" id="customPickerHueTrack" role="slider" aria-label="Tono" aria-valuemin="0" aria-valuemax="360" tabindex="0">
+        <div class="custom-picker-slider-handle" id="customPickerHueHandle"></div>
+      </div>
     </div>
 
-    <div class="custom-picker-hue-bar" id="customPickerHueBar">
-      <div class="custom-picker-hue-handle" id="customPickerHueHandle"></div>
+    <!-- Saturación (Saturation) -->
+    <div class="custom-picker-slider-group">
+      <label for="customPickerSatTrack" class="custom-picker-label">Saturación</label>
+      <div class="custom-picker-slider-track custom-picker-sat-track" id="customPickerSatTrack" role="slider" aria-label="Saturación" aria-valuemin="0" aria-valuemax="100" tabindex="0">
+        <div class="custom-picker-slider-handle" id="customPickerSatHandle"></div>
+      </div>
     </div>
 
-    <div class="custom-picker-hex-badge">
-      <input type="text" id="customPickerHexInput" class="custom-picker-hex-input" maxlength="7" spellcheck="false" autocomplete="off" value="#C42127">
+    <!-- Brillo (Value / Brightness) -->
+    <div class="custom-picker-slider-group">
+      <label for="customPickerValTrack" class="custom-picker-label">Brillo</label>
+      <div class="custom-picker-slider-track custom-picker-val-track" id="customPickerValTrack" role="slider" aria-label="Brillo" aria-valuemin="0" aria-valuemax="100" tabindex="0">
+        <div class="custom-picker-slider-handle" id="customPickerValHandle"></div>
+      </div>
+    </div>
+
+    <!-- Footer: Preview Circle + Hex Input + Aceptar Button -->
+    <div class="custom-picker-footer">
+      <div class="custom-picker-preview-circle" id="customPickerPreviewCircle" title="Color actual"></div>
+      <div class="custom-picker-hex-badge">
+        <input type="text" id="customPickerHexInput" class="custom-picker-hex-input" maxlength="7" spellcheck="false" autocomplete="off" value="#C42127" aria-label="Código HEX">
+      </div>
+      <button type="button" id="customPickerAcceptBtn" class="custom-picker-accept-btn" title="Aceptar selección">Aceptar</button>
     </div>
   </div>
 </section>
