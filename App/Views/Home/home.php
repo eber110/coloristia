@@ -12,7 +12,6 @@
   window.COLORISTIA_DATA = {
     isLoggedIn: <?= $isLoggedIn ? 'true' : 'false' ?>,
     colorSystem: <?= json_encode($colorSystem, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>,
-    user: <?= json_encode($user, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>,
     projects: <?= json_encode($projects, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>
   };
 </script>
