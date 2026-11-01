@@ -43,6 +43,18 @@ class HomeControllers extends Control
     SeoModule::setTitle("Coloristia — Generador Profesional de Paletas Cromáticas");
     SeoModule::setMetaDescription("Generador profesional de paletas cromáticas armónicas y escalables de 6 a 16 colores con reglas geométricas y accesibilidad WCAG.");
 
+    SeoModule::setOpenGraph([
+      "site_name"    => "Coloristia",
+      "title"        => "Coloristia — Generador Profesional de Paletas Cromáticas",
+      "description"  => "Generador profesional de paletas cromáticas armónicas y escalables de 6 a 16 colores con reglas geométricas y accesibilidad WCAG.",
+      "type"         => "website",
+      "image"        => IMG_OG,
+      "image_width"  => 1200,
+      "image_height" => 630,
+      "link"         => defined("DOMAIN") ? DOMAIN : "/",
+      "locale"       => "es_CL"
+    ]);
+
     return $this->view("Home.home", [
       "user"        => $user,
       "isLoggedIn"  => $isLoggedIn,

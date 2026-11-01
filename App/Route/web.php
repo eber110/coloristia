@@ -4,6 +4,7 @@ use Core\Route;
 use App\Controllers\HomeControllers;
 use App\Controllers\AuthControllers;
 use App\Controllers\ProjectControllers;
+use App\Controllers\SeoControllers;
 use App\Middleware\VisitMiddleware;
 
 /**
@@ -14,6 +15,11 @@ use App\Middleware\VisitMiddleware;
 Route::middleware([VisitMiddleware::class])->group(function () {
   Route::get("/", [HomeControllers::class, "home"]);
 });
+
+// SEO, sitemap and crawler directive routes
+Route::get("/sitemap.xml", [SeoControllers::class, "sitemap"]);
+Route::get("/robots.txt", [SeoControllers::class, "robots"]);
+Route::get("/llms.txt", [SeoControllers::class, "llms"]);
 
 // Authentication and user preferences routes
 Route::prefix("/autenticacion")->group(function () {

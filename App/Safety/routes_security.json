@@ -1,6 +1,6 @@
 {
-    "generated_at": "2026-10-31 16:27:54",
-    "total_routes": 10,
+    "generated_at": "2026-11-01 19:40:25",
+    "total_routes": 13,
     "static_routes": [
         {
             "method": "GET",
@@ -12,6 +12,33 @@
             "middlewares": [
                 "App\\Middleware\\VisitMiddleware"
             ]
+        },
+        {
+            "method": "GET",
+            "uri": "/sitemap.xml",
+            "has_variables": false,
+            "variables": [],
+            "protect_at_controller": false,
+            "action": "App\\Controllers\\SeoControllers@sitemap",
+            "middlewares": []
+        },
+        {
+            "method": "GET",
+            "uri": "/robots.txt",
+            "has_variables": false,
+            "variables": [],
+            "protect_at_controller": false,
+            "action": "App\\Controllers\\SeoControllers@robots",
+            "middlewares": []
+        },
+        {
+            "method": "GET",
+            "uri": "/llms.txt",
+            "has_variables": false,
+            "variables": [],
+            "protect_at_controller": false,
+            "action": "App\\Controllers\\SeoControllers@llms",
+            "middlewares": []
         },
         {
             "method": "POST",
@@ -97,7 +124,7 @@
     ],
     "dynamic_routes": [],
     "summary_by_method": {
-        "GET": 3,
+        "GET": 6,
         "POST": 7
     }
 }

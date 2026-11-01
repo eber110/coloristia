@@ -1,4 +1,6 @@
 <?php
+use Base\Module\SeoModule;
+
 /**
  * Main orchestrator view for Coloristia.
  *
@@ -6,6 +8,22 @@
  * @var bool $isLoggedIn
  * @var string $colorSystem
  */
+
+echo SeoModule::schemaJson([
+  "@context" => "https://schema.org",
+  "@type" => "WebApplication",
+  "name" => "Coloristia",
+  "url" => rtrim(DOMAIN, "/"),
+  "description" => "Generador profesional de paletas cromáticas armónicas y escalables de 6 a 16 colores con reglas geométricas y accesibilidad WCAG.",
+  "applicationCategory" => "DesignApplication",
+  "operatingSystem" => "All",
+  "inLanguage" => "es",
+  "offers" => [
+    "@type" => "Offer",
+    "price" => "0",
+    "priceCurrency" => "USD"
+  ]
+]);
 ?>
 <div class="coloristia-wrapper" id="coloristiaWrapper" data-logged-in="<?= $isLoggedIn ? '1' : '0' ?>" data-color-system="<?= e($colorSystem) ?>">
   <div class="ambient-glow ambient-glow-primary" id="ambientGlow1" aria-hidden="true"></div>
