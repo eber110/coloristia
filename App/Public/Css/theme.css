@@ -535,34 +535,90 @@ body {
   transform: scale(0.98);
 }
 
-/* Palette Text Colors Card (Lightest & Darkest Tones for Accessible Typography) */
+/* Palette Text Colors Card (Accordion: Lightest & Darkest Tones for Accessible Typography) */
 .palette-text-card {
   background-color: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
-  padding: 18px 20px;
+  padding: 0;
   margin-bottom: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
   box-sizing: border-box;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.palette-text-card-header {
+.palette-text-card:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.palette-text-accordion-trigger {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
   gap: 14px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 14px 18px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: background-color 0.18s ease;
+}
+
+.palette-text-accordion-trigger:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.palette-text-accordion-trigger:focus-visible {
+  outline: 2px solid var(--color-primary-brand);
+  outline-offset: -2px;
 }
 
 .palette-text-card-title-group {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+}
+
+.palette-text-title-wrapper {
+  min-width: 0;
+}
+
+.palette-text-chevron-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding-left: 8px;
+}
+
+.palette-text-chevron-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), background 0.18s ease, color 0.18s ease;
+}
+
+.palette-text-chevron-svg {
+  width: 13px;
+  height: 13px;
+  fill: currentColor;
+}
+
+.palette-text-card.is-expanded .palette-text-chevron-icon {
+  transform: rotate(180deg);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
 .palette-text-badge-icon {
@@ -574,6 +630,8 @@ body {
   border-radius: 10px;
   background: rgba(196, 33, 39, 0.15);
   color: var(--color-primary-brand);
+  font-weight: 700;
+  font-size: 1.1rem;
   flex-shrink: 0;
 }
 
@@ -589,6 +647,22 @@ body {
   color: #94a3b8;
   margin: 3px 0 0 0;
   line-height: 1.35;
+}
+
+.palette-text-accordion-collapse {
+  padding: 0 18px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 14px;
+}
+
+.palette-text-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
 }
 
 .palette-text-harmony-picker {

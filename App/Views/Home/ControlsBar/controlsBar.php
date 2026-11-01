@@ -40,10 +40,10 @@
 
     <!-- Variations Stepper (6 to 15) -->
     <div class="control-group-vertical">
-      <label class="control-label">Variaciones (6-15):</label>
-      <div class="stepper-box">
+      <span id="variationsLabel" class="control-label">Variaciones (6-15):</span>
+      <div class="stepper-box" role="group" aria-labelledby="variationsLabel">
         <button type="button" id="decreaseVariationsBtn" class="stepper-btn" aria-label="Disminuir variaciones">−</button>
-        <span id="variationCountDisplay" class="stepper-value font-mono">15</span>
+        <span id="variationCountDisplay" class="stepper-value font-mono" aria-live="polite">15</span>
         <button type="button" id="increaseVariationsBtn" class="stepper-btn" aria-label="Aumentar variaciones">+</button>
       </div>
     </div>

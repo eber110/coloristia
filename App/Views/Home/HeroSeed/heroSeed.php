@@ -19,24 +19,24 @@
   <div id="coloristiaPickerPopover" class="custom-picker-popover" style="display: none;" role="dialog" aria-label="Selector de color personalizado">
     <!-- Tono (Hue) -->
     <div class="custom-picker-slider-group">
-      <label for="customPickerHueTrack" class="custom-picker-label">Tono</label>
-      <div class="custom-picker-slider-track custom-picker-hue-track" id="customPickerHueTrack" role="slider" aria-label="Tono" aria-valuemin="0" aria-valuemax="360" tabindex="0">
+      <span id="customPickerHueLabel" class="custom-picker-label">Tono</span>
+      <div class="custom-picker-slider-track custom-picker-hue-track" id="customPickerHueTrack" role="slider" aria-labelledby="customPickerHueLabel" aria-valuemin="0" aria-valuemax="360" tabindex="0">
         <div class="custom-picker-slider-handle" id="customPickerHueHandle"></div>
       </div>
     </div>
 
     <!-- Saturación (Saturation) -->
     <div class="custom-picker-slider-group">
-      <label for="customPickerSatTrack" class="custom-picker-label">Saturación</label>
-      <div class="custom-picker-slider-track custom-picker-sat-track" id="customPickerSatTrack" role="slider" aria-label="Saturación" aria-valuemin="0" aria-valuemax="100" tabindex="0">
+      <span id="customPickerSatLabel" class="custom-picker-label">Saturación</span>
+      <div class="custom-picker-slider-track custom-picker-sat-track" id="customPickerSatTrack" role="slider" aria-labelledby="customPickerSatLabel" aria-valuemin="0" aria-valuemax="100" tabindex="0">
         <div class="custom-picker-slider-handle" id="customPickerSatHandle"></div>
       </div>
     </div>
 
     <!-- Brillo (Value / Brightness) -->
     <div class="custom-picker-slider-group">
-      <label for="customPickerValTrack" class="custom-picker-label">Brillo</label>
-      <div class="custom-picker-slider-track custom-picker-val-track" id="customPickerValTrack" role="slider" aria-label="Brillo" aria-valuemin="0" aria-valuemax="100" tabindex="0">
+      <span id="customPickerValLabel" class="custom-picker-label">Brillo</span>
+      <div class="custom-picker-slider-track custom-picker-val-track" id="customPickerValTrack" role="slider" aria-labelledby="customPickerValLabel" aria-valuemin="0" aria-valuemax="100" tabindex="0">
         <div class="custom-picker-slider-handle" id="customPickerValHandle"></div>
       </div>
     </div>

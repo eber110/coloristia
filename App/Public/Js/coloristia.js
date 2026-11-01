@@ -2047,10 +2047,35 @@ export function renderExportCode(format = null, target = null) {
       };
 
       for (const [key, item] of Object.entries(data.harmonies)) {
+        let darkest = item.colors[0];
+        let lightest = item.colors[0];
+        item.colors.forEach((c) => {
+          if (c.luminance < darkest.luminance) darkest = c;
+          if (c.luminance > lightest.luminance) lightest = c;
+        });
+        const ratio = (lightest.luminance + 0.05) / (darkest.luminance + 0.05);
+        const level = ratio >= 7 ? "AAA" : (ratio >= 4.5 ? "AA" : "AA+");
+
         jsonAll.harmonies[key] = {
           id: key,
           name: item.rule.name,
           description: item.rule.description,
+          textColors: {
+            darkText: {
+              value: formatColorValue(darkest, state.colorSystem),
+              hex: darkest.hex,
+              role: "Texto oscuro para fondos claros de la paleta",
+              wcagRatio: Number(ratio.toFixed(1)),
+              wcagLevel: level
+            },
+            lightText: {
+              value: formatColorValue(lightest, state.colorSystem),
+              hex: lightest.hex,
+              role: "Texto claro para fondos oscuros de la paleta",
+              wcagRatio: Number(ratio.toFixed(1)),
+              wcagLevel: level
+            }
+          },
           colors: item.colors.map((c, i) => ({
             step: i + 1,
             value: formatColorValue(c, state.colorSystem),
@@ -2065,6 +2090,15 @@ export function renderExportCode(format = null, target = null) {
 
       codeOutput = JSON.stringify(jsonAll, null, 2);
     } else {
+      let darkest = singleHarmony.colors[0];
+      let lightest = singleHarmony.colors[0];
+      singleHarmony.colors.forEach((c) => {
+        if (c.luminance < darkest.luminance) darkest = c;
+        if (c.luminance > lightest.luminance) lightest = c;
+      });
+      const ratio = (lightest.luminance + 0.05) / (darkest.luminance + 0.05);
+      const level = ratio >= 7 ? "AAA" : (ratio >= 4.5 ? "AA" : "AA+");
+
       const jsonSingle = {
         generator: "Coloristia",
         paletteName: `Coloristia - ${singleHarmony.rule.name} (${baseFormatted})`,
@@ -2076,6 +2110,22 @@ export function renderExportCode(format = null, target = null) {
           id: currentTarget,
           name: singleHarmony.rule.name,
           description: singleHarmony.rule.description
+        },
+        textColors: {
+          darkText: {
+            value: formatColorValue(darkest, state.colorSystem),
+            hex: darkest.hex,
+            role: "Texto oscuro para fondos claros de la paleta",
+            wcagRatio: Number(ratio.toFixed(1)),
+            wcagLevel: level
+          },
+          lightText: {
+            value: formatColorValue(lightest, state.colorSystem),
+            hex: lightest.hex,
+            role: "Texto claro para fondos oscuros de la paleta",
+            wcagRatio: Number(ratio.toFixed(1)),
+            wcagLevel: level
+          }
         },
         colors: singleHarmony.colors.map((c, i) => ({
           step: i + 1,
@@ -2750,6 +2800,34 @@ export function initColoristia() {
       if (textColorHarmonySelect) textColorHarmonySelect.value = e.target.value;
       renderTextColorsCard();
       updateMobileHarmonyVisibility();
+    });
+  }
+
+  // Harmonic text colors accordion: always starts hidden by default
+  const textAccordionToggle = document.getElementById("paletteTextAccordionToggle");
+  const textAccordionCollapse = document.getElementById("paletteTextAccordionCollapse");
+  const textColorsCard = document.getElementById("paletteTextColorsCard");
+
+  if (textAccordionToggle && textAccordionCollapse && textColorsCard) {
+    textAccordionCollapse.style.display = "none";
+    textColorsCard.classList.add("is-collapsed");
+    textColorsCard.classList.remove("is-expanded");
+    textAccordionToggle.setAttribute("aria-expanded", "false");
+
+    textAccordionToggle.addEventListener("click", () => {
+      const isCurrentlyHidden = textAccordionCollapse.style.display === "none";
+      if (isCurrentlyHidden) {
+        textAccordionCollapse.style.display = "flex";
+        textColorsCard.classList.remove("is-collapsed");
+        textColorsCard.classList.add("is-expanded");
+        textAccordionToggle.setAttribute("aria-expanded", "true");
+        renderTextColorsCard();
+      } else {
+        textAccordionCollapse.style.display = "none";
+        textColorsCard.classList.add("is-collapsed");
+        textColorsCard.classList.remove("is-expanded");
+        textAccordionToggle.setAttribute("aria-expanded", "false");
+      }
     });
   }
 

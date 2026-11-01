@@ -116,11 +116,14 @@ html.gsap-loaded .hover-tilt { transition: none !important; }
 .gap12 { gap: 12px; }
 .gap14 { gap: 14px; }
 .gap16 { gap: 16px; }
+.gap20 { gap: 20px; }
 .gap5 { gap: 5px; }
 .gap6 { gap: 6px; }
 .gap8 { gap: 8px; }
 .blur { backdrop-filter: blur(5px) !important; -webkit-backdrop-filter: blur(5px) !important; }
 .shadow { filter: drop-shadow(5px 5px 2.3px rgba(0, 0, 0, 0.43)); }
+.shine-hover { filter: drop-shadow(0px 0px 0px rgba(255, 255, 255, 0)); transition: var(--transition-slow, all 0.25s ease-in-out); }
+.shine-hover:hover { filter: drop-shadow(0px 0px 1px rgb(255, 255, 255)) drop-shadow(0px 0px 10px rgba(255, 255, 255, 0.5)); }
 .flex { display: flex; }
 .flex-column { display: flex; flex-direction: column; }
 .flex-row { display: flex; flex-direction: row; }
@@ -145,7 +148,6 @@ html.gsap-loaded .hover-tilt { transition: none !important; }
 .font-extrabold, .extrabold { font-weight: 800 !important; }
 .font-extralight, .extralight { font-weight: 200 !important; }
 .font { font-family: var(--font) !important; }
-.font-bold { font-weight: 700 !important; }
 .font-medium, .medium { font-weight: 500 !important; }
 .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important; }
 .font-semibold, .semibold { font-weight: 600 !important; }
@@ -166,7 +168,6 @@ html.gsap-loaded .hover-tilt { transition: none !important; }
 .textw, .textw a { color: white !important; }
 .font-thin, .thin { font-weight: 100 !important; }
 .title { font-size: 35px; font-weight: 400; margin: 0px; padding: 0px; text-wrap: balance; }
-.tracking-wider { letter-spacing: 0.05em; }
 .truncate, .text-truncate, .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .underline { text-decoration: underline !important; }
 .upper { text-transform: uppercase !important; }
@@ -203,6 +204,7 @@ html.gsap-loaded .hover-tilt { transition: none !important; }
 .h100 { height: 100%; }
 .h2 { height: 2%; }
 .h3 { height: 3%; }
+.hpx15 { height: 15px; }
 .hpx22 { height: 22px; }
 .hpx30 { height: 30px; }
 .hpx80 { height: 80px; }
@@ -240,9 +242,11 @@ html.gsap-loaded .hover-tilt { transition: none !important; }
 .pr45 { padding-right: 45px !important; }
 .pt10 { padding-top: 10px !important; }
 .w-auto { width: auto !important; }
+.w-fit { width: fit-content !important; }
 .w100 { width: 100%; }
 .w3 { width: 3%; }
 .w50 { width: 50%; }
+.wpx15 { width: 15px; }
 .wpx22 { width: 22px; }
 .wpx80 { width: 80px; }
 .x00 { font-size: 00px; }
@@ -345,6 +349,23 @@ html.gsap-loaded .hover-tilt { transition: none !important; }
 @media screen and (max-width: 576px) {
   .flex-column-sml.end-start { justify-content: flex-end; align-items: flex-start; }
   .flex-row-sml.end-start { align-items: flex-end; justify-content: flex-start; }
+}
+@media screen and (max-width: 576px) {
+  .flex-column-sml { display: flex !important; flex-direction: column !important; }
+}
+.flex-column.top-around { justify-content: flex-start; align-items: space-around; }
+.flex-row.top-around { align-items: flex-start; justify-content: space-around; }
+@media screen and (min-width: 993px) {
+  .flex-column-desk.top-around { justify-content: flex-start; align-items: space-around; }
+  .flex-row-desk.top-around { align-items: flex-start; justify-content: space-around; }
+}
+@media screen and (min-width: 577px) and (max-width: 992px) {
+  .flex-column-mid.top-around { justify-content: flex-start; align-items: space-around; }
+  .flex-row-mid.top-around { align-items: flex-start; justify-content: space-around; }
+}
+@media screen and (max-width: 576px) {
+  .flex-column-sml.top-around { justify-content: flex-start; align-items: space-around; }
+  .flex-row-sml.top-around { align-items: flex-start; justify-content: space-around; }
 }
 .flex-column.top-center { justify-content: flex-start; align-items: center; }
 .flex-row.top-center { align-items: flex-start; justify-content: center; }
