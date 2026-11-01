@@ -36,6 +36,7 @@
             </figure>
             Clikhub/@eber
           </a>
+          <a href="https://github.com/eber110/coloristia" target="_blank" rel="noopener noreferrer" class="textw shine-hover">Github coloristia</a>
           <!-- <a href="https://github.com/eber110" target="_blank" rel="noopener noreferrer" class="textw shine-hover">GitHub (eber110)</a> -->
         </div>
         <p class="x14"><?= svg("registered", "x20")?> - Eber Sánchez Cornejo 2026.</p>
