@@ -15,6 +15,6 @@
  */
 
 return [
-    'Gsap',
-    'Charts',
+    // 'Gsap',
+    // 'Charts',
 ];

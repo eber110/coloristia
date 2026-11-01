@@ -25,6 +25,11 @@ echo SeoModule::schemaJson([
   ]
 ]);
 ?>
+<script>
+  if (document.body && !document.body.id) {
+    document.body.id = 'body';
+  }
+</script>
 <div class="coloristia-wrapper" id="coloristiaWrapper" data-logged-in="<?= $isLoggedIn ? '1' : '0' ?>" data-color-system="<?= e($colorSystem) ?>">
   <div class="ambient-glow ambient-glow-primary" id="ambientGlow1" aria-hidden="true"></div>
   <div class="ambient-glow ambient-glow-secondary" id="ambientGlow2" aria-hidden="true"></div>

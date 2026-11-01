@@ -10,7 +10,7 @@
       <div class="flex-column center-start gap12 w-fit">
         <div class="flex-row center-center gap10">
           <figure class="hpx30">
-            <img src="<?= LOGOPAG?>" alt="" class="cover">
+            <img src="<?= LOGOPAG?>" alt="Coloristia Logo" class="cover" width="30" height="30">
           </figure>
           <span class="brand-title">Coloristia</span>
         </div>
@@ -24,7 +24,7 @@
       <div class="flex-column w50 gap10 w-fit">
         <div class="flex-row center-start gap10">
           <figure class="hpx30">
-            <img src="<?= DIR_SHOW_MEDIA."logo-esc.png"?>" alt="" class="cover">
+            <img src="<?= DIR_SHOW_MEDIA."logo-esc.png"?>" alt="Eber Sánchez Cornejo" class="cover" width="30" height="30">
           </figure>
           <span class="brand-title">Eber Sánchez Cornejo</span>
         </div>
@@ -32,7 +32,7 @@
           <a href="https://ebersanchez.cl" target="_blank" rel="noopener noreferrer" class="textw shine-hover">Sitio Web Oficial</a>
           <a href="https://clikhub.app/eber" target="_blank" rel="noopener noreferrer" class="textw shine-hover flex-row center-start gap5">
             <figure class="hpx15 wpx15">
-              <img src="<?= DIR_SHOW_MEDIA."logo-cursor.webp"?>" alt="" class="cover">
+              <img src="<?= DIR_SHOW_MEDIA."logo-cursor.webp"?>" alt="Clikhub Icono" class="cover" width="15" height="15">
             </figure>
             Clikhub/@eber
           </a>

@@ -915,13 +915,15 @@ export function renderHeroSeed(options = {}) {
       return `
         <div id="heroDefaultSeedItem" class="hero-seed-item">
           ${!isDefaultActive ? `<button type="button" class="pill-go-to-palette" data-action="activate-default" title="Ir al color base">Color base</button>` : ""}
-          <div id="heroColorSwatch"
-               class="hero-color-circle ${isDefaultActive ? "hero-circle-active" : ""}"
-               data-action="circle-default"
-               data-hex="${state.defaultColor}"
-               style="background-color: ${state.defaultColor};"
-               title="Haz clic para seleccionar o usar el color base">
-          </div>
+          <button type="button"
+                  id="heroColorSwatch"
+                  class="hero-color-circle ${isDefaultActive ? "hero-circle-active" : ""}"
+                  data-action="circle-default"
+                  data-hex="${state.defaultColor}"
+                  style="background-color: ${state.defaultColor}; border: none; cursor: pointer;"
+                  title="Haz clic para seleccionar o usar el color base"
+                  aria-label="Abrir selector para color base ${state.defaultColor}">
+          </button>
           <div class="hero-seed-label-wrap">
             <button type="button" id="heroColorLabel" class="hero-seed-hex-btn font-mono" data-action="activate-default" title="Haz clic para seleccionar o usar el color base">${state.defaultColor}</button>
             <div class="hero-seed-underline"></div>
@@ -2997,6 +2999,7 @@ export function initColoristia() {
       new window.FloatingScroll(8, "var(--color-primary-brand, #8b5cf6)", "");
     } catch (_) {}
   }
+  ensureAccessibleFloatingScroll();
 
   if (typeof window.modal === "function") {
     try {
@@ -3008,8 +3011,51 @@ export function initColoristia() {
   renderHarmonies({ isInitial: true });
 }
 
+/**
+ * Garantiza que floating-scroll-track cumpla con los estándares de W3C ARIA,
+ * Lighthouse y Agentic Browsing, evitando errores de IDREF roto y valores faltantes.
+ */
+function ensureAccessibleFloatingScroll() {
+  if (typeof document === "undefined") return;
+
+  if (document.body && !document.body.id) {
+    document.body.id = "body";
+  }
+
+  const track = document.getElementById("floating-scroll-track");
+  if (track) {
+    track.setAttribute("aria-controls", "body");
+    track.setAttribute("aria-orientation", "vertical");
+    track.setAttribute("aria-valuemin", "0");
+    track.setAttribute("aria-valuemax", "100");
+    if (!track.hasAttribute("aria-valuenow")) {
+      track.setAttribute("aria-valuenow", "0");
+    }
+    track.setAttribute("aria-label", "Barra de desplazamiento");
+  }
+}
+
 // Auto-bootstrap on DOM ready in browser environment
 if (typeof document !== "undefined") {
+  ensureAccessibleFloatingScroll();
+
+  if (typeof MutationObserver !== "undefined") {
+    const scrollObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (node.nodeType === 1 && (node.id === "floating-scroll-track" || node.querySelector?.("#floating-scroll-track"))) {
+            ensureAccessibleFloatingScroll();
+          }
+        }
+      }
+    });
+
+    const targetEl = document.body || document.documentElement;
+    if (targetEl) {
+      scrollObserver.observe(targetEl, { childList: true, subtree: true });
+    }
+  }
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initColoristia);
   } else {
