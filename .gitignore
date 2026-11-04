@@ -1,5 +1,8 @@
 /vendor/
 .env
+.env.*
+!.env.example
+/dist/
 /App/Public/Min/
 /Cache/*
 !/Cache/.gitkeep
@@ -13,6 +16,7 @@
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+*.zip
 .vscode/
 
 # Reglas esenciales del framework (sincronizadas por InitAppStructure)
